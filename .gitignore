@@ -1,8 +1,8 @@
 .DS_Store
 node_modules
 .idea
+.vscode
 package-lock.json
 /build
-.vscode/
-.idea/
 vite.config.*s.*
+.env
