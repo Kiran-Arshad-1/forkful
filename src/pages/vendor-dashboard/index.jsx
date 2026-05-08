@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from 'components/AppIcon';
+import useAuthStore from '../../store/authStore';
 
 import VendorDashboardTabs from 'components/ui/VendorDashboardTabs';
 import BusinessProfileTab from './components/BusinessProfileTab';
@@ -10,29 +11,31 @@ import BillingTab from './components/BillingTab';
 import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 
-const VENDOR = {
-  name: 'Island Bites Kitchen',
-  email: 'vendor@islandbites.com',
-  avatar: 'IB',
-  approvalStatus: 'pending',
-};
-
 const VendorDashboard = () => {
   const [activeTab, setActiveTab] = useState('business-profile');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
+  const { profile, user, signOut } = useAuthStore();
 
-  const handleLogout = () => navigate('/vendor-login');
+  const vendorName = profile?.business_name || user?.email || 'Vendor';
+  const vendorEmail = profile?.email || user?.email || '';
+  const vendorAvatar = vendorName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const approvalStatus = profile?.approval_status || 'pending';
+
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/vendor-login');
+  };
 
   const renderTab = () => {
     switch (activeTab) {
-      case 'business-profile': return <BusinessProfileTab approvalStatus={VENDOR?.approvalStatus} />;
+      case 'business-profile': return <BusinessProfileTab approvalStatus={approvalStatus} />;
       case 'menu': return <MenuTab />;
       case 'photos': return <PhotosTab />;
       case 'billing': return <BillingTab />;
       case 'insights': return <InsightsTab />;
       case 'reviews': return <ReviewsTab />;
-      default: return <BusinessProfileTab approvalStatus={VENDOR?.approvalStatus} />;
+      default: return <BusinessProfileTab approvalStatus={approvalStatus} />;
     }
   };
 
@@ -50,24 +53,24 @@ const VendorDashboard = () => {
               className="h-10 w-auto object-contain"
             />
             <span className="hidden md:block mx-1" style={{ color: 'rgba(155,164,232,0.5)' }}>/</span>
-            <span className="hidden md:block text-sm font-body truncate max-w-[160px]" style={{ color: '#9BA4E8' }}>{VENDOR?.name}</span>
+            <span className="hidden md:block text-sm font-body truncate max-w-[160px]" style={{ color: '#9BA4E8' }}>{vendorName}</span>
           </div>
 
           {/* Right side */}
           <div className="flex items-center gap-2 md:gap-3">
             {/* Approval Status Badge */}
             <div className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-              VENDOR?.approvalStatus === 'approved' ?'border-emerald-500/30' :'border-yellow-500/30'
+              approvalStatus === 'approved' ? 'border-emerald-500/30' : 'border-yellow-500/30'
             }`} style={{
-              background: VENDOR?.approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-              color: VENDOR?.approvalStatus === 'approved' ? '#10B981' : '#C9A84C'
+              background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
+              color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C'
             }}>
               <Icon
-                name={VENDOR?.approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
+                name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
                 size={12}
-                color={VENDOR?.approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
+                color={approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
               />
-              {VENDOR?.approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
+              {approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
             </div>
 
             {/* View Listing */}
@@ -89,9 +92,9 @@ const VendorDashboard = () => {
               >
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
                   style={{ background: '#C9A84C', color: '#0F1A5C' }}>
-                  {VENDOR?.avatar}
+                  {vendorAvatar}
                 </div>
-                <span className="hidden md:block text-sm font-medium max-w-[120px] truncate" style={{ color: '#FFFFFF' }}>{VENDOR?.name}</span>
+                <span className="hidden md:block text-sm font-medium max-w-[120px] truncate" style={{ color: '#FFFFFF' }}>{vendorName}</span>
                 <Icon name="ChevronDown" size={14} color="#9BA4E8" />
               </button>
 
@@ -101,8 +104,8 @@ const VendorDashboard = () => {
                   <div className="absolute right-0 top-full mt-1 w-52 rounded-xl shadow-lg z-50 py-1"
                     style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
                     <div className="px-3 py-2" style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                      <p className="text-xs font-semibold truncate" style={{ color: '#FFFFFF' }}>{VENDOR?.name}</p>
-                      <p className="text-xs truncate" style={{ color: '#9BA4E8' }}>{VENDOR?.email}</p>
+                      <p className="text-xs font-semibold truncate" style={{ color: '#FFFFFF' }}>{vendorName}</p>
+                      <p className="text-xs truncate" style={{ color: '#9BA4E8' }}>{vendorEmail}</p>
                     </div>
                     <button
                       onClick={() => { setShowUserMenu(false); navigate('/vendor-login'); }}
@@ -140,16 +143,16 @@ const VendorDashboard = () => {
         {/* Mobile Status Badge */}
         <div className={`sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit`}
           style={{
-            background: VENDOR?.approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-            color: VENDOR?.approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
-            borderColor: VENDOR?.approvalStatus === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)'
+            background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
+            color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
+            borderColor: approvalStatus === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)'
           }}>
           <Icon
-            name={VENDOR?.approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
+            name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
             size={12}
-            color={VENDOR?.approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
+            color={approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
           />
-          {VENDOR?.approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
+          {approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
         </div>
 
         {/* Tab Panel */}

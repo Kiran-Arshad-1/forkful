@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Icon from 'components/AppIcon';
-
-const MOCK_CREDENTIALS = {
-  vendor: { email: 'vendor@forkful.com', password: 'Vendor@123' },
-  admin: { email: 'admin@forkful.com', password: 'Admin@123' },
-};
+import useAuthStore from '../../../store/authStore';
 
 const LoginForm = () => {
   const navigate = useNavigate();
+  const { signIn } = useAuthStore();
+
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
   const [errors, setErrors] = useState({});
@@ -17,47 +15,52 @@ const LoginForm = () => {
   const [authError, setAuthError] = useState('');
 
   const validate = () => {
-    const newErrors = {};
-    if (!formData?.email) {
-      newErrors.email = 'Email address is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/?.test(formData?.email)) {
-      newErrors.email = 'Please enter a valid email address.';
+    const errs = {};
+    if (!formData.email) {
+      errs.email = 'Email address is required.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errs.email = 'Please enter a valid email address.';
     }
-    if (!formData?.password) {
-      newErrors.password = 'Password is required.';
-    } else if (formData?.password?.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters.';
+    if (!formData.password) {
+      errs.password = 'Password is required.';
     }
-    return newErrors;
+    return errs;
   };
 
   const handleChange = (e) => {
-    const { name, value } = e?.target;
+    const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors?.[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
     if (authError) setAuthError('');
   };
 
   const handleSubmit = async (e) => {
-    e?.preventDefault();
+    e.preventDefault();
     const validationErrors = validate();
-    if (Object.keys(validationErrors)?.length > 0) {
+    if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       return;
     }
+
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setLoading(false);
+    setAuthError('');
 
-    const isVendor = formData?.email === MOCK_CREDENTIALS?.vendor?.email && formData?.password === MOCK_CREDENTIALS?.vendor?.password;
-    const isAdmin = formData?.email === MOCK_CREDENTIALS?.admin?.email && formData?.password === MOCK_CREDENTIALS?.admin?.password;
-
-    if (isVendor) {
-      navigate('/vendor-dashboard');
-    } else if (isAdmin) {
-      navigate('/admin-dashboard');
-    } else {
-      setAuthError(`Invalid email or password. Use vendor@forkful.com / Vendor@123 or admin@forkful.com / Admin@123`);
+    try {
+      await signIn(formData.email.trim(), formData.password);
+      // signIn resolves role before returning — read it directly from the store
+      const { role } = useAuthStore.getState();
+      navigate(role === 'admin' ? '/admin-dashboard' : '/vendor-dashboard', { replace: true });
+    } catch (err) {
+      const msg = (err?.message || '').toLowerCase();
+      if (msg.includes('invalid login') || msg.includes('invalid credentials')) {
+        setAuthError('Invalid email or password. Please try again.');
+      } else if (msg.includes('email not confirmed') || err?.status === 422) {
+        setAuthError('Your email is not confirmed. Please check your inbox or contact support.');
+      } else {
+        setAuthError(err?.message || 'Sign in failed. Please try again.');
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,33 +101,37 @@ const LoginForm = () => {
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {/* Email */}
         <div className="space-y-2">
-          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>Email Address <span style={{ color: '#F87171' }}>*</span></label>
+          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
+            Email Address <span style={{ color: '#F87171' }}>*</span>
+          </label>
           <input
             type="email"
             name="email"
             placeholder="you@example.com"
-            value={formData?.email}
+            value={formData.email}
             onChange={handleChange}
             autoComplete="email"
             className="w-full h-10 rounded-lg px-3 py-2 text-sm outline-none transition-all duration-250"
-            style={{ background: '#0F1A5C', border: errors?.email ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+            style={{ background: '#0F1A5C', border: errors.email ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
           />
-          {errors?.email && <p className="text-sm" style={{ color: '#F87171' }}>{errors?.email}</p>}
+          {errors.email && <p className="text-sm" style={{ color: '#F87171' }}>{errors.email}</p>}
         </div>
 
         {/* Password */}
         <div className="space-y-2">
-          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>Password <span style={{ color: '#F87171' }}>*</span></label>
+          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
+            Password <span style={{ color: '#F87171' }}>*</span>
+          </label>
           <div className="relative">
             <input
               type={showPassword ? 'text' : 'password'}
               name="password"
               placeholder="Enter your password"
-              value={formData?.password}
+              value={formData.password}
               onChange={handleChange}
               autoComplete="current-password"
               className="w-full h-10 rounded-lg px-3 py-2 pr-10 text-sm outline-none transition-all duration-250"
-              style={{ background: '#0F1A5C', border: errors?.password ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+              style={{ background: '#0F1A5C', border: errors.password ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
             />
             <button
               type="button"
@@ -137,7 +144,7 @@ const LoginForm = () => {
               <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={18} />
             </button>
           </div>
-          {errors?.password && <p className="text-sm" style={{ color: '#F87171' }}>{errors?.password}</p>}
+          {errors.password && <p className="text-sm" style={{ color: '#F87171' }}>{errors.password}</p>}
         </div>
 
         {/* Remember me + Forgot password */}
@@ -146,7 +153,7 @@ const LoginForm = () => {
             <input
               type="checkbox"
               checked={rememberMe}
-              onChange={(e) => setRememberMe(e?.target?.checked)}
+              onChange={(e) => setRememberMe(e.target.checked)}
               className="w-4 h-4 rounded"
               style={{ accentColor: '#C9A84C' }}
             />
@@ -168,7 +175,7 @@ const LoginForm = () => {
           className="w-full py-3 rounded-lg font-bold text-sm transition-all duration-250 hover:opacity-90 disabled:opacity-50 mt-2"
           style={{ background: '#C9A84C', color: '#0F1A5C' }}
         >
-          {loading ? 'Signing in...' : 'Log In'}
+          {loading ? 'Signing in…' : 'Log In'}
         </button>
       </form>
 

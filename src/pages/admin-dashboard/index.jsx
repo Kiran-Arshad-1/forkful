@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { supabase } from '../../lib/supabase';
 
 import AdminNavigation from 'components/ui/AdminNavigation';
 import Icon from 'components/AppIcon';
@@ -13,167 +14,27 @@ import VendorFilters from './components/VendorFilters';
 import VendorTable from './components/VendorTable';
 import SubscriptionPanel from './components/SubscriptionPanel';
 
-const MOCK_VENDORS = [
-{
-  id: 1,
-  businessName: "Spice Garden",
-  ownerName: "Marcus Thompson",
-  email: "marcus@spicegarden.com",
-  phone: "+1 (876) 555-0101",
-  whatsapp: "+1 (876) 555-0101",
-  instagram: "@spicegarden_jm",
-  cuisineType: "Restaurant",
-  parish: "Kingston",
-  address: "45 Hope Road, Kingston 6, Jamaica",
-  description: "Authentic Jamaican cuisine featuring traditional recipes passed down through generations. Specializing in jerk chicken, curry goat, and fresh seafood dishes.",
-  approvalStatus: "approved",
-  subscriptionStatus: "active",
-  submittedDate: "01/15/2026",
-  lat: 17.9970,
-  lng: -76.7936,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_1072e8818-1772674868940.png",
-  photoAlt: "Colorful Jamaican restaurant interior with wooden tables and vibrant wall art featuring tropical motifs"
-},
-{
-  id: 2,
-  businessName: "The Jerk Shack",
-  ownerName: "Donna Williams",
-  email: "donna@jerkshack.com",
-  phone: "+1 (876) 555-0202",
-  whatsapp: "+1 (876) 555-0202",
-  instagram: "@thejerkshack",
-  cuisineType: "Food Truck",
-  parish: "St. Andrew",
-  address: "12 Constant Spring Road, Kingston",
-  description: "Mobile jerk pit serving the best slow-cooked jerk pork and chicken in Kingston. Open daily from 11am to 10pm.",
-  approvalStatus: "pending",
-  subscriptionStatus: "trial",
-  submittedDate: "02/28/2026",
-  lat: 18.0280,
-  lng: -76.7820,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_1a179d640-1772674867872.png",
-  photoAlt: "Rustic food truck with smoke rising from jerk pit grill parked on busy street corner"
-},
-{
-  id: 3,
-  businessName: "Island Bites",
-  ownerName: "Kevin Brown",
-  email: "kevin@islandbites.com",
-  phone: "+1 (876) 555-0303",
-  whatsapp: "+1 (876) 555-0303",
-  instagram: "@islandbites_jm",
-  cuisineType: "Cafe",
-  parish: "Montego Bay",
-  address: "78 Gloucester Avenue, Montego Bay",
-  description: "Beachside cafe offering fresh juices, smoothie bowls, and light Caribbean bites. Perfect for breakfast and brunch.",
-  approvalStatus: "approved",
-  subscriptionStatus: "past_due",
-  submittedDate: "01/20/2026",
-  lat: 18.4762,
-  lng: -77.9197,
-  photo: "https://images.unsplash.com/photo-1712491199489-9ada3130ff7c",
-  photoAlt: "Bright beachside cafe with white walls, colorful cushions, and ocean view through open windows"
-},
-{
-  id: 4,
-  businessName: "Curry House",
-  ownerName: "Priya Patel",
-  email: "priya@curryhouse.com",
-  phone: "+1 (876) 555-0404",
-  whatsapp: "+1 (876) 555-0404",
-  instagram: "@curryhouse_jm",
-  cuisineType: "Restaurant",
-  parish: "St. Catherine",
-  address: "23 Spanish Town Road, Portmore",
-  description: "Indo-Caribbean fusion restaurant bringing the best of Indian spices to Jamaican ingredients. Family-owned since 2010.",
-  approvalStatus: "approved",
-  subscriptionStatus: "active",
-  submittedDate: "12/10/2025",
-  lat: 17.9500,
-  lng: -76.8833,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_19ec918c0-1772208603667.png",
-  photoAlt: "Elegant Indian restaurant interior with warm amber lighting, ornate decor, and neatly set dining tables"
-},
-{
-  id: 5,
-  businessName: "Mama\'s Kitchen",
-  ownerName: "Gloria Reid",
-  email: "gloria@mamaskitchen.com",
-  phone: "+1 (876) 555-0505",
-  whatsapp: "+1 (876) 555-0505",
-  instagram: "@mamaskitchen_jm",
-  cuisineType: "Street Food",
-  parish: "Clarendon",
-  address: "5 Main Street, May Pen, Clarendon",
-  description: "Home-style Jamaican cooking with love. Serving ackee and saltfish, callaloo, and traditional Sunday dinners.",
-  approvalStatus: "pending",
-  subscriptionStatus: "trial",
-  submittedDate: "03/01/2026",
-  lat: 17.9667,
-  lng: -77.2500,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_1e5d0a445-1772674869573.png",
-  photoAlt: "Cozy home-style kitchen with pots on stove, colorful tiles, and traditional Jamaican food being prepared"
-},
-{
-  id: 6,
-  businessName: "Breadfruit Bakery",
-  ownerName: "Sandra Clarke",
-  email: "sandra@breadfruitbakery.com",
-  phone: "+1 (876) 555-0606",
-  whatsapp: "+1 (876) 555-0606",
-  instagram: "@breadfruitbakery",
-  cuisineType: "Bakery",
-  parish: "St. James",
-  address: "34 Union Street, Montego Bay",
-  description: "Artisan bakery specializing in hard dough bread, bulla cakes, and Caribbean pastries baked fresh daily.",
-  approvalStatus: "disabled",
-  subscriptionStatus: "cancelled",
-  submittedDate: "11/05/2025",
-  lat: 18.4762,
-  lng: -77.9197,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_158ad7b0c-1772674874992.png",
-  photoAlt: "Warm artisan bakery display case filled with freshly baked breads, pastries, and Caribbean baked goods"
-},
-{
-  id: 7,
-  businessName: "Seafood Paradise",
-  ownerName: "Devon Campbell",
-  email: "devon@seafoodparadise.com",
-  phone: "+1 (876) 555-0707",
-  whatsapp: "+1 (876) 555-0707",
-  instagram: "@seafoodparadise_jm",
-  cuisineType: "Restaurant",
-  parish: "Portland",
-  address: "1 Boston Bay Road, Portland",
-  description: "Fresh catch seafood restaurant on the famous Boston Bay. Specializing in peppered shrimp, lobster, and grilled fish.",
-  approvalStatus: "pending",
-  subscriptionStatus: "trial",
-  submittedDate: "03/03/2026",
-  lat: 18.1667,
-  lng: -76.3833,
-  photo: "https://img.rocket.new/generatedImages/rocket_gen_img_14e658273-1772674871200.png",
-  photoAlt: "Waterfront seafood restaurant with open-air seating, ocean views, and fresh catch displayed on ice"
-},
-{
-  id: 8,
-  businessName: "Veggie Vibes",
-  ownerName: "Natasha Green",
-  email: "natasha@veggievibes.com",
-  phone: "+1 (876) 555-0808",
-  whatsapp: "+1 (876) 555-0808",
-  instagram: "@veggievibes_jm",
-  cuisineType: "Cafe",
-  parish: "Kingston",
-  address: "88 Barbican Road, Kingston 8",
-  description: "Plant-based Jamaican cuisine celebrating the Ital tradition. Wholesome, nourishing meals made with locally sourced produce.",
-  approvalStatus: "approved",
-  subscriptionStatus: "active",
-  submittedDate: "02/14/2026",
-  lat: 18.0100,
-  lng: -76.7700,
-  photo: "https://images.unsplash.com/photo-1601065700897-d9fa1c093f3e",
-  photoAlt: "Bright plant-based cafe with green walls, wooden furniture, and colorful fresh vegetable dishes on display"
-}];
+const mapProfile = (p) => ({
+  id: p.id,
+  businessName: p.business_name || '',
+  ownerName: p.full_name || '',
+  email: p.email || '',
+  phone: p.contact_phone || '',
+  whatsapp: p.contact_phone || '',
+  instagram: '',
+  cuisineType: '',
+  parish: '',
+  address: '',
+  description: '',
+  approvalStatus: p.approval_status,
+  subscriptionStatus: 'trial',
+  submittedDate: p.created_at
+    ? new Date(p.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+    : '',
+  photo: '',
+  photoAlt: p.business_name || '',
+  is_listed: p.is_listed,
+});
 
 
 const SECTIONS = [
@@ -192,7 +53,8 @@ const AdminDashboard = () => {
   };
   const [sidebarCollapsed] = useState(true);
 
-  const [vendors, setVendors] = useState(MOCK_VENDORS);
+  const [vendors, setVendors] = useState([]);
+  const [vendorsLoading, setVendorsLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [approvalFilter, setApprovalFilter] = useState('all');
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
@@ -207,6 +69,18 @@ const AdminDashboard = () => {
     setToast(msg);
     setTimeout(() => setToast(null), 3000);
   };
+
+  const fetchVendors = useCallback(async () => {
+    setVendorsLoading(true);
+    const { data, error } = await supabase
+      .from('vendor_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!error && data) setVendors(data.map(mapProfile));
+    setVendorsLoading(false);
+  }, []);
+
+  useEffect(() => { fetchVendors(); }, [fetchVendors]);
 
   // Filtered vendors based on section
   const baseVendors = useMemo(() => {
@@ -237,27 +111,35 @@ const AdminDashboard = () => {
     setConfirmModal({ open: true, type: 'disable', vendorId: id, vendorName: vendor?.businessName || '' });
   };
 
-  const handleConfirm = () => {
-    const { type, vendorId } = confirmModal;
-    setVendors((prev) =>
-    prev?.map((v) =>
-    v?.id === vendorId ?
-    { ...v, approvalStatus: type === 'approve' ? 'approved' : 'disabled' } :
-    v
-    )
-    );
-    if (detailVendor?.id === vendorId) {
-      setDetailVendor((prev) => prev ? { ...prev, approvalStatus: type === 'approve' ? 'approved' : 'disabled' } : null);
-    }
-    showToast(`${confirmModal?.vendorName} has been ${type === 'approve' ? 'approved' : 'disabled'} successfully.`);
+  const handleConfirm = async () => {
+    const { type, vendorId, vendorName } = confirmModal;
+    const newStatus = type === 'approve' ? 'approved' : 'rejected';
     setConfirmModal({ open: false, type: null, vendorId: null, vendorName: '' });
+
+    const { error } = await supabase
+      .from('vendor_profiles')
+      .update({ approval_status: newStatus })
+      .eq('id', vendorId);
+
+    if (error) { showToast(`Error: ${error.message}`); return; }
+
+    setVendors((prev) => prev.map((v) => v.id === vendorId ? { ...v, approvalStatus: newStatus } : v));
+    if (detailVendor?.id === vendorId) {
+      setDetailVendor((prev) => prev ? { ...prev, approvalStatus: newStatus } : null);
+    }
+    showToast(`${vendorName} has been ${type === 'approve' ? 'approved' : 'rejected'} successfully.`);
   };
 
-  const handleBulkApprove = () => {
-    setVendors((prev) =>
-    prev?.map((v) => selectedIds?.includes(v?.id) ? { ...v, approvalStatus: 'approved' } : v)
-    );
-    showToast(`${selectedIds?.length} vendor(s) approved successfully.`);
+  const handleBulkApprove = async () => {
+    const { error } = await supabase
+      .from('vendor_profiles')
+      .update({ approval_status: 'approved' })
+      .in('id', selectedIds);
+
+    if (error) { showToast(`Error: ${error.message}`); return; }
+
+    setVendors((prev) => prev.map((v) => selectedIds.includes(v.id) ? { ...v, approvalStatus: 'approved' } : v));
+    showToast(`${selectedIds.length} vendor(s) approved successfully.`);
     setSelectedIds([]);
   };
 
@@ -418,20 +300,29 @@ const AdminDashboard = () => {
                 onClearFilters={handleClearFilters}
                 selectedCount={selectedIds?.length}
                 onBulkApprove={handleBulkApprove} />
-              
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>
-                    Showing <span className="font-semibold" style={{ color: '#FFFFFF' }}>{filteredVendors?.length}</span> vendor{filteredVendors?.length !== 1 ? 's' : ''}
-                  </p>
-                </div>
-                <VendorTable
-                vendors={filteredVendors}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-                onToggleSelectAll={handleToggleSelectAll}
-                onViewDetail={setDetailVendor}
-                onApprove={handleApprove}
-                onDisable={handleDisable} />
+
+                {vendorsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="w-8 h-8 rounded-full border-4 animate-spin"
+                      style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>
+                        Showing <span className="font-semibold" style={{ color: '#FFFFFF' }}>{filteredVendors?.length}</span> vendor{filteredVendors?.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                    <VendorTable
+                    vendors={filteredVendors}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleSelectAll={handleToggleSelectAll}
+                    onViewDetail={setDetailVendor}
+                    onApprove={handleApprove}
+                    onDisable={handleDisable} />
+                  </>
+                )}
               </>
             }
 
@@ -506,15 +397,22 @@ const AdminDashboard = () => {
                 onClearFilters={handleClearFilters}
                 selectedCount={selectedIds?.length}
                 onBulkApprove={handleBulkApprove} />
-              
-                <VendorTable
-                vendors={filteredVendors}
-                selectedIds={selectedIds}
-                onToggleSelect={handleToggleSelect}
-                onToggleSelectAll={handleToggleSelectAll}
-                onViewDetail={setDetailVendor}
-                onApprove={handleApprove}
-                onDisable={handleDisable} />
+
+                {vendorsLoading ? (
+                  <div className="flex items-center justify-center py-16">
+                    <div className="w-8 h-8 rounded-full border-4 animate-spin"
+                      style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+                  </div>
+                ) : (
+                  <VendorTable
+                  vendors={filteredVendors}
+                  selectedIds={selectedIds}
+                  onToggleSelect={handleToggleSelect}
+                  onToggleSelectAll={handleToggleSelectAll}
+                  onViewDetail={setDetailVendor}
+                  onApprove={handleApprove}
+                  onDisable={handleDisable} />
+                )}
               </>
             }
 
@@ -532,13 +430,13 @@ const AdminDashboard = () => {
       
       <ConfirmModal
         isOpen={confirmModal?.open}
-        title={confirmModal?.type === 'approve' ? 'Approve Vendor' : 'Disable Vendor'}
+        title={confirmModal?.type === 'approve' ? 'Approve Vendor' : 'Reject Vendor'}
         message={
         confirmModal?.type === 'approve' ?
         `Are you sure you want to approve "${confirmModal?.vendorName}"? Their listing will become visible on the platform.` :
-        `Are you sure you want to disable "${confirmModal?.vendorName}"? Their listing will be hidden from the platform.`
+        `Are you sure you want to reject "${confirmModal?.vendorName}"? Their listing will be hidden from the platform.`
         }
-        confirmLabel={confirmModal?.type === 'approve' ? 'Yes, Approve' : 'Yes, Disable'}
+        confirmLabel={confirmModal?.type === 'approve' ? 'Yes, Approve' : 'Yes, Reject'}
         confirmVariant={confirmModal?.type === 'approve' ? 'success' : 'destructive'}
         onConfirm={handleConfirm}
         onCancel={() => setConfirmModal({ open: false, type: null, vendorId: null, vendorName: '' })} />
