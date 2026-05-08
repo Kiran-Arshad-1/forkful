@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 import AdminNavigation from 'components/ui/AdminNavigation';
 import Icon from 'components/AppIcon';
@@ -183,7 +184,12 @@ const SECTIONS = [
 
 
 const AdminDashboard = () => {
-  const [activeSection, setActiveSection] = useState('overview');
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const activeSection = searchParams.get('section') || 'overview';
+  const setActiveSection = (section) => {
+    navigate(section === 'overview' ? '/admin-dashboard' : `/admin-dashboard?section=${section}`);
+  };
   const [sidebarCollapsed] = useState(true);
 
   const [vendors, setVendors] = useState(MOCK_VENDORS);
