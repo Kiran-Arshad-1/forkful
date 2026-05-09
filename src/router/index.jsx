@@ -15,6 +15,7 @@ import ProtectedRoute  from '../components/auth/ProtectedRoute';
 import PasswordReset   from '../components/auth/PasswordReset';
 import PendingApproval from '../components/auth/PendingApproval';
 import RejectedAccount from '../components/auth/RejectedAccount';
+import AuthCallback    from '../components/auth/AuthCallback';
 
 const Router = () => (
   <BrowserRouter>
@@ -29,6 +30,7 @@ const Router = () => (
         <Route path="/vendor-login"    element={<VendorLogin />} />
         <Route path="/vendor-signup"   element={<VendorSignup />} />
         <Route path="/password-reset"  element={<PasswordReset />} />
+        <Route path="/auth/callback"   element={<AuthCallback />} />
 
         {/* Vendor auth-gated — approval gate pages (no requireApproved check) */}
         <Route element={<ProtectedRoute allowedRoles={['vendor']} requireApproved={false} />}>
