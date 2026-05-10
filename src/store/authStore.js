@@ -23,27 +23,7 @@ const resolveUserRole = async (user) => {
   if (aErr) console.error('[auth] admin_profiles lookup failed:', aErr.message);
   if (adminProfile) return { role: 'admin', profile: adminProfile };
 
-  // Auto-create a vendor profile for new Google OAuth sign-ins
-  const providers = user.app_metadata?.providers || [];
-  const isOAuth = user.app_metadata?.provider === 'google' || providers.includes('google');
-  if (isOAuth) {
-    const name = user.user_metadata?.full_name || user.user_metadata?.name || '';
-    const email = user.email || '';
-    const { data: created } = await supabase
-      .from('vendor_profiles')
-      .insert({
-        user_id: user.id,
-        business_name: name || email.split('@')[0],
-        full_name: name,
-        email,
-        approval_status: 'pending',
-        is_listed: false,
-      })
-      .select()
-      .single();
-    if (created) return { role: 'vendor', profile: created };
-  }
-
+  // New Google user — no profile yet. Caller handles redirect to signup.
   return { role: null, profile: null };
 };
 

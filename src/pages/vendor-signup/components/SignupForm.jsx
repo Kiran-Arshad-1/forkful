@@ -4,12 +4,16 @@ import Button from 'components/ui/Button';
 import Icon from 'components/AppIcon';
 import PasswordStrengthIndicator from './PasswordStrengthIndicator';
 import { supabase } from '../../../lib/supabase';
+import useAuthStore from '../../../store/authStore';
 
-const SignupForm = ({ onSuccess }) => {
+const SignupForm = ({ onSuccess, googlePrefill }) => {
+  const isGoogle = !!googlePrefill;
+  const { user } = useAuthStore();
+
   const [form, setForm] = useState({
     businessName: '',
-    fullName: '',
-    email: '',
+    fullName: googlePrefill?.fullName || '',
+    email: googlePrefill?.email || '',
     phone: '',
     password: '',
     confirmPassword: '',
@@ -24,25 +28,29 @@ const SignupForm = ({ onSuccess }) => {
     const e = {};
     if (!form.businessName?.trim()) e.businessName = 'Business name is required.';
     if (!form.fullName?.trim()) e.fullName = 'Full name is required.';
-    if (!form.email?.trim()) {
-      e.email = 'Email is required.';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      e.email = 'Enter a valid email address.';
+    if (!isGoogle) {
+      if (!form.email?.trim()) {
+        e.email = 'Email is required.';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+        e.email = 'Enter a valid email address.';
+      }
     }
     if (!form.phone?.trim()) {
       e.phone = 'Phone number is required.';
     } else if (!/^\+?[\d\s\-()+]{7,20}$/.test(form.phone)) {
       e.phone = 'Enter a valid phone number.';
     }
-    if (!form.password) {
-      e.password = 'Password is required.';
-    } else if (form.password.length < 8) {
-      e.password = 'Password must be at least 8 characters.';
-    }
-    if (!form.confirmPassword) {
-      e.confirmPassword = 'Please confirm your password.';
-    } else if (form.password !== form.confirmPassword) {
-      e.confirmPassword = 'Passwords do not match.';
+    if (!isGoogle) {
+      if (!form.password) {
+        e.password = 'Password is required.';
+      } else if (form.password.length < 8) {
+        e.password = 'Password must be at least 8 characters.';
+      }
+      if (!form.confirmPassword) {
+        e.confirmPassword = 'Please confirm your password.';
+      } else if (form.password !== form.confirmPassword) {
+        e.confirmPassword = 'Passwords do not match.';
+      }
     }
     if (!form.agreeTerms) {
       e.agreeTerms = 'You must agree to the Terms of Service and Privacy Policy.';
@@ -59,39 +67,62 @@ const SignupForm = ({ onSuccess }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const errs = validate();
-    if (Object.keys(errs).length > 0) {
-      setErrors(errs);
-      return;
-    }
+    if (Object.keys(errs).length > 0) { setErrors(errs); return; }
     setLoading(true);
     setErrors({});
 
     let succeeded = false;
     try {
-      const { error: authError } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password: form.password,
-        options: {
-          data: {
-            role: 'vendor',
+      if (isGoogle) {
+        // User is already authenticated via Google — just create the vendor profile
+        const { data: profile, error } = await supabase
+          .from('vendor_profiles')
+          .insert({
+            user_id: user.id,
             business_name: form.businessName.trim(),
             full_name: form.fullName.trim(),
+            email: form.email.trim(),
             contact_phone: form.phone.trim(),
-          },
-        },
-      });
+            approval_status: 'pending',
+            is_listed: false,
+          })
+          .select()
+          .single();
 
-      if (authError) {
-        const msg = authError.message.toLowerCase();
-        if (msg.includes('already registered') || msg.includes('already exists')) {
-          setErrors({ email: 'An account with this email already exists. Please sign in.' });
-        } else {
-          setErrors({ submit: authError.message });
+        if (error) {
+          setErrors({ submit: error.message });
+          return;
         }
-        return;
-      }
 
-      succeeded = true;
+        // Update auth store so ProtectedRoute sees the new role immediately
+        useAuthStore.setState({ profile, role: 'vendor' });
+        succeeded = true;
+      } else {
+        // Email/password signup
+        const { error: authError } = await supabase.auth.signUp({
+          email: form.email.trim(),
+          password: form.password,
+          options: {
+            data: {
+              role: 'vendor',
+              business_name: form.businessName.trim(),
+              full_name: form.fullName.trim(),
+              contact_phone: form.phone.trim(),
+            },
+          },
+        });
+
+        if (authError) {
+          const msg = authError.message.toLowerCase();
+          if (msg.includes('already registered') || msg.includes('already exists')) {
+            setErrors({ email: 'An account with this email already exists. Please sign in.' });
+          } else {
+            setErrors({ submit: authError.message });
+          }
+          return;
+        }
+        succeeded = true;
+      }
     } catch {
       setErrors({ submit: 'An unexpected error occurred. Please try again.' });
     } finally {
@@ -107,6 +138,16 @@ const SignupForm = ({ onSuccess }) => {
         <div className="flex items-center gap-2 p-3 rounded-lg bg-error/10 border border-error/20">
           <Icon name="AlertCircle" size={16} color="var(--color-error)" />
           <p className="text-sm text-error font-body">{errors.submit}</p>
+        </div>
+      )}
+
+      {isGoogle && (
+        <div className="flex items-center gap-2 p-3 rounded-lg mb-1"
+          style={{ background: 'rgba(66,133,244,0.1)', border: '1px solid rgba(66,133,244,0.3)' }}>
+          <Icon name="Info" size={15} color="#4285F4" />
+          <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>
+            Signed in with Google as <span className="font-semibold text-white">{googlePrefill.email}</span>. Complete your business profile below.
+          </p>
         </div>
       )}
 
@@ -134,16 +175,18 @@ const SignupForm = ({ onSuccess }) => {
         name="fullName"
       />
 
+      {/* Email — read-only for Google users */}
       <Input
         label="Business Email"
         type="email"
         placeholder="you@yourbusiness.com"
         value={form.email}
-        onChange={handleChange('email')}
+        onChange={isGoogle ? undefined : handleChange('email')}
         error={errors.email}
         required
         id="email"
         name="email"
+        disabled={isGoogle}
       />
 
       <Input
@@ -158,54 +201,57 @@ const SignupForm = ({ onSuccess }) => {
         name="phone"
       />
 
-      {/* Password */}
-      <div>
-        <div className="relative">
-          <Input
-            label="Password"
-            type={showPassword ? 'text' : 'password'}
-            placeholder="Create a strong password"
-            value={form.password}
-            onChange={handleChange('password')}
-            error={errors.password}
-            required
-            id="password"
-            name="password"
-          />
-          <button
-            type="button"
-            onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-8 text-muted-foreground hover:text-foreground transition-colors"
-            aria-label={showPassword ? 'Hide password' : 'Show password'}
-          >
-            <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={16} />
-          </button>
-        </div>
-        <PasswordStrengthIndicator password={form.password} />
-      </div>
+      {/* Password fields — only for email signup */}
+      {!isGoogle && (
+        <>
+          <div>
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Create a strong password"
+                value={form.password}
+                onChange={handleChange('password')}
+                error={errors.password}
+                required
+                id="password"
+                name="password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute right-3 top-8 text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={16} />
+              </button>
+            </div>
+            <PasswordStrengthIndicator password={form.password} />
+          </div>
 
-      {/* Confirm password */}
-      <div className="relative">
-        <Input
-          label="Confirm Password"
-          type={showConfirm ? 'text' : 'password'}
-          placeholder="Re-enter your password"
-          value={form.confirmPassword}
-          onChange={handleChange('confirmPassword')}
-          error={errors.confirmPassword}
-          required
-          id="confirmPassword"
-          name="confirmPassword"
-        />
-        <button
-          type="button"
-          onClick={() => setShowConfirm((v) => !v)}
-          className="absolute right-3 top-8 text-muted-foreground hover:text-foreground transition-colors"
-          aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
-        >
-          <Icon name={showConfirm ? 'EyeOff' : 'Eye'} size={16} />
-        </button>
-      </div>
+          <div className="relative">
+            <Input
+              label="Confirm Password"
+              type={showConfirm ? 'text' : 'password'}
+              placeholder="Re-enter your password"
+              value={form.confirmPassword}
+              onChange={handleChange('confirmPassword')}
+              error={errors.confirmPassword}
+              required
+              id="confirmPassword"
+              name="confirmPassword"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute right-3 top-8 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label={showConfirm ? 'Hide confirm password' : 'Show confirm password'}
+            >
+              <Icon name={showConfirm ? 'EyeOff' : 'Eye'} size={16} />
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Terms */}
       <div>
@@ -246,7 +292,7 @@ const SignupForm = ({ onSuccess }) => {
         type="submit"
         className="mt-2"
       >
-        {loading ? 'Creating Account…' : 'Create Account'}
+        {loading ? 'Creating Account…' : 'Complete Registration'}
       </Button>
     </form>
   );

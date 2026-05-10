@@ -4,7 +4,7 @@ import useAuthStore from '../../store/authStore';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
-  const { isLoading, isAuthenticated, role } = useAuthStore();
+  const { isLoading, isAuthenticated, role, user } = useAuthStore();
   const didNavigate = useRef(false);
 
   useEffect(() => {
@@ -13,13 +13,34 @@ const AuthCallback = () => {
 
     didNavigate.current = true;
 
-    if (!isAuthenticated || !role) {
+    if (!isAuthenticated) {
       navigate('/vendor-login', { replace: true });
       return;
     }
 
-    navigate(role === 'admin' ? '/admin-dashboard' : '/vendor-dashboard', { replace: true });
-  }, [isLoading, isAuthenticated, role, navigate]);
+    if (role) {
+      navigate(role === 'admin' ? '/admin-dashboard' : '/vendor-dashboard', { replace: true });
+      return;
+    }
+
+    // Authenticated but no profile yet — new Google user
+    const providers = user?.app_metadata?.providers || [];
+    const isGoogle = user?.app_metadata?.provider === 'google' || providers.includes('google');
+    if (isGoogle) {
+      navigate('/vendor-signup', {
+        replace: true,
+        state: {
+          googlePrefill: {
+            email: user.email || '',
+            fullName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          },
+        },
+      });
+      return;
+    }
+
+    navigate('/vendor-login', { replace: true });
+  }, [isLoading, isAuthenticated, role, user, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#0F1A5C' }}>

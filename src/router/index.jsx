@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ScrollToTop    from 'components/ScrollToTop';
 import ErrorBoundary  from 'components/ErrorBoundary';
 import NotFound       from 'pages/NotFound';
@@ -23,8 +23,8 @@ const Router = () => (
       <ScrollToTop />
       <Routes>
 
-        {/* Default → login */}
-        <Route path="/" element={<Navigate to="/vendor-login" replace />} />
+        {/* Default → AuthCallback handles OAuth params, then redirects */}
+        <Route path="/" element={<AuthCallback />} />
 
         {/* Public */}
         <Route path="/vendor-login"    element={<VendorLogin />} />

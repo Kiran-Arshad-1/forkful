@@ -14,7 +14,7 @@ const GoogleIcon = () => (
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { signIn, signInWithGoogle, isAuthenticated, role, isLoading } = useAuthStore();
+  const { signIn, signInWithGoogle, isAuthenticated, role, isLoading, user } = useAuthStore();
 
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [rememberMe, setRememberMe] = useState(false);
@@ -24,12 +24,30 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Redirect already-authenticated users (handles Google OAuth landing here via root redirect)
   useEffect(() => {
-    if (!isLoading && isAuthenticated && role) {
+    if (isLoading || !isAuthenticated) return;
+
+    if (role) {
+      // Existing user with a profile — go to their dashboard
       navigate(role === 'admin' ? '/admin-dashboard' : '/vendor-dashboard', { replace: true });
+      return;
     }
-  }, [isLoading, isAuthenticated, role, navigate]);
+
+    // Authenticated but no profile → new Google user, send to signup with pre-filled data
+    const providers = user?.app_metadata?.providers || [];
+    const isGoogle = user?.app_metadata?.provider === 'google' || providers.includes('google');
+    if (isGoogle) {
+      navigate('/vendor-signup', {
+        replace: true,
+        state: {
+          googlePrefill: {
+            email: user.email || '',
+            fullName: user.user_metadata?.full_name || user.user_metadata?.name || '',
+          },
+        },
+      });
+    }
+  }, [isLoading, isAuthenticated, role, user, navigate]);
 
   const validate = () => {
     const errs = {};
