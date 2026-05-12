@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Icon from 'components/AppIcon';
 import Input from 'components/ui/Input';
-import { supabase } from '../../../lib/supabase';
-import { useAuth } from '../../../contexts/AuthContext';
+import useAuthStore from '../../../store/authStore';
+import useVendorProfileStore from '../../../store/vendorProfileStore';
 
 // Barbados parishes
 const PARISHES = [
@@ -37,10 +37,18 @@ const BARBADOS_CENTER = { lat: 13.1939, lng: -59.5432 };
 const BARBADOS_ZOOM = 11;
 
 const BusinessProfileTab = ({ approvalStatus }) => {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
+
+  const {
+    profile,
+    openingHours: savedHours,
+    fetchProfile,
+    saveBusinessProfile,
+  } = useVendorProfileStore();
+
   const [form, setForm] = useState({
-    businessName: 'Island Bites Kitchen',
-    description: 'Authentic Bajan cuisine made with fresh local ingredients. We specialize in flying fish, cou-cou, and traditional pudding & souse.',
+    businessName: '',
+    description: '',
     cuisineType: 'Bajan',
     parish: 'st_michael',
     address: '',
@@ -57,7 +65,6 @@ const BusinessProfileTab = ({ approvalStatus }) => {
   const [saveError, setSaveError] = useState('');
   const [geoLoading, setGeoLoading] = useState(false);
   const [geoMessage, setGeoMessage] = useState('');
-  const [vendorId, setVendorId] = useState(null);
   const [dataLoading, setDataLoading] = useState(true);
 
   const mapRef = useRef(null);
@@ -65,40 +72,30 @@ const BusinessProfileTab = ({ approvalStatus }) => {
   const markerRef = useRef(null);
   const leafletLoadedRef = useRef(false);
 
-  // Load vendor data from Supabase
+  // Fetch profile from Supabase via the store
   useEffect(() => {
-    const loadVendorData = async () => {
-      if (!user?.id) { setDataLoading(false); return; }
-      try {
-        const { data: account } = await supabase?.from('vendor_accounts')?.select('vendor_id')?.eq('user_id', user?.id)?.single();
-
-        if (account?.vendor_id) {
-          setVendorId(account?.vendor_id);
-          const { data: vendor } = await supabase?.from('vendors')?.select('name, description, category, parish, address, latitude, longitude, phone, email')?.eq('id', account?.vendor_id)?.single();
-
-          if (vendor) {
-            setForm(prev => ({
-              ...prev,
-              businessName: vendor?.name || '',
-              description: vendor?.description || '',
-              cuisineType: vendor?.category || 'Bajan',
-              parish: vendor?.parish || 'st_michael',
-              address: vendor?.address || '',
-              lat: vendor?.latitude != null ? String(vendor?.latitude) : '',
-              lng: vendor?.longitude != null ? String(vendor?.longitude) : '',
-              phone: vendor?.phone || '',
-              instagram: vendor?.email || '',
-            }));
-          }
-        }
-      } catch (err) {
-        console.error('Error loading vendor data:', err);
-      } finally {
-        setDataLoading(false);
-      }
-    };
-    loadVendorData();
+    if (!user?.id) { setDataLoading(false); return; }
+    fetchProfile(user.id);
   }, [user?.id]);
+
+  // Hydrate local form state when the store profile loads
+  useEffect(() => {
+    if (!profile) return;
+    setForm({
+      businessName: profile?.business_name ?? '',
+      description:  profile?.description   ?? '',
+      cuisineType:  profile?.cuisine_type  ?? 'Bajan',
+      parish:       profile?.parish        ?? 'st_michael',
+      address:      profile?.address       ?? '',
+      lat:          profile?.latitude  != null ? String(profile?.latitude)  : '',
+      lng:          profile?.longitude != null ? String(profile?.longitude) : '',
+      phone:        profile?.phone     ?? '',
+      whatsapp:     profile?.whatsapp  ?? '',
+      instagram:    profile?.instagram ?? '',
+    });
+    setHours(savedHours);
+    setDataLoading(false);
+  }, [profile?.id]);
 
   // Load Leaflet CSS + JS dynamically
   useEffect(() => {
@@ -279,7 +276,6 @@ const BusinessProfileTab = ({ approvalStatus }) => {
 
   const validate = () => {
     const errs = {};
-    if (!form?.businessName?.trim()) errs.businessName = 'Business name is required';
     if (!form?.description?.trim()) errs.description = 'Description is required';
     if (!form?.address?.trim()) errs.address = 'Address is required';
     if (!form?.phone?.trim()) errs.phone = 'Phone number is required';
@@ -293,33 +289,8 @@ const BusinessProfileTab = ({ approvalStatus }) => {
     if (Object.keys(errs)?.length > 0) { setErrors(errs); return; }
     setSaving(true);
     setSaveError('');
-
     try {
-      const updateData = {
-        name: form?.businessName,
-        description: form?.description,
-        category: form?.cuisineType,
-        parish: form?.parish,
-        address: form?.address,
-        phone: form?.phone,
-        updated_at: new Date()?.toISOString(),
-      };
-
-      if (form?.lat && form?.lng) {
-        const latNum = parseFloat(form?.lat);
-        const lngNum = parseFloat(form?.lng);
-        if (!isNaN(latNum) && !isNaN(lngNum)) {
-          updateData.latitude = latNum;
-          updateData.longitude = lngNum;
-        }
-      }
-
-      if (vendorId) {
-        const { error } = await supabase?.from('vendors')?.update(updateData)?.eq('id', vendorId);
-
-        if (error) throw error;
-      }
-
+      await saveBusinessProfile(form, hours);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -355,15 +326,23 @@ const BusinessProfileTab = ({ approvalStatus }) => {
         <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Basic Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="md:col-span-2">
-            <Input
-              label="Business Name"
-              type="text"
-              value={form?.businessName}
-              onChange={e => handleChange('businessName', e?.target?.value)}
-              placeholder="Enter your business name"
-              error={errors?.businessName}
-              required
-            />
+            <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
+              Business Name
+            </label>
+            <div
+              className="w-full px-3 py-2 text-sm rounded-lg"
+              style={{
+                background: 'rgba(15,26,92,0.5)',
+                border: '1px solid rgba(201,168,76,0.15)',
+                color: '#9BA4E8',
+                cursor: 'not-allowed',
+              }}
+            >
+              {form?.businessName || '—'}
+            </div>
+            <p className="text-xs mt-1" style={{ color: 'rgba(155,164,232,0.6)' }}>
+              Business name is set during sign-up and cannot be changed here.
+            </p>
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>

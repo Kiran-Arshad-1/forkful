@@ -40,7 +40,7 @@ const VendorDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen" style={{ background: '#0F1A5C' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#0F1A5C' }}>
       {/* Top Header */}
       <header className="fixed top-0 left-0 right-0 z-navigation h-16 flex items-center px-4 md:px-6 lg:px-8"
         style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(201,168,76,0.3)' }}>
@@ -139,7 +139,7 @@ const VendorDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-6 lg:py-8">
+      <main className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-6 lg:py-8">
         {/* Mobile Status Badge */}
         <div className={`sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit`}
           style={{
