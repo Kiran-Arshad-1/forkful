@@ -26,8 +26,15 @@ const PhotosTab = () => {
   const [uploading, setUploading]       = useState(false);
   const [uploadQueue, setUploadQueue]   = useState([]); // { file, caption, id }
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting]         = useState(false);
   const [uploadError, setUploadError]   = useState('');
+  const [toast, setToast]               = useState(null);
   const fileInputRef = useRef(null);
+
+  const showToast = (msg, isError = false) => {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   // Load profile then photos
   useEffect(() => {
@@ -91,8 +98,17 @@ const PhotosTab = () => {
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   const handleDelete = async (photo) => {
-    await deletePhoto(photo.id, photo.storage_path);
-    setDeleteConfirm(null);
+    setDeleting(true);
+    try {
+      await deletePhoto(photo.id, photo.storage_path);
+      setDeleteConfirm(null);
+      showToast('Photo deleted successfully.');
+    } catch (err) {
+      setDeleteConfirm(null);
+      showToast(err?.message || 'Failed to delete photo. Please try again.', true);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -341,6 +357,26 @@ const PhotosTab = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Toast */}
+      {toast && (
+        <div
+          className="fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-xl text-sm flex items-center gap-2 max-w-sm"
+          style={{
+            background: '#1B2A8B',
+            border: `1px solid ${toast.isError ? 'rgba(248,113,113,0.4)' : 'rgba(201,168,76,0.4)'}`,
+            color: '#FFFFFF',
+            zIndex: 9999,
+          }}
+        >
+          <Icon
+            name={toast.isError ? 'AlertCircle' : 'CheckCircle'}
+            size={16}
+            color={toast.isError ? '#F87171' : '#10B981'}
+          />
+          {toast.msg}
         </div>
       )}
     </div>

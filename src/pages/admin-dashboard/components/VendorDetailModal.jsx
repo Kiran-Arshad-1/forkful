@@ -1,92 +1,192 @@
 import React from 'react';
-import Button from 'components/ui/Button';
 import Icon from 'components/AppIcon';
 import Image from 'components/AppImage';
 import StatusBadge from './StatusBadge';
 
+const Field = ({ label, value }) => (
+  <div>
+    <p className="text-xs font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'rgba(155,164,232,0.6)' }}>
+      {label}
+    </p>
+    <p className="text-sm" style={{ color: value ? '#FFFFFF' : '#9BA4E8' }}>
+      {value || '—'}
+    </p>
+  </div>
+);
+
+const ActionButton = ({ onClick, icon, label, bg, color }) => (
+  <button
+    onClick={onClick}
+    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all hover:opacity-80"
+    style={{ background: bg, color }}
+  >
+    <Icon name={icon} size={14} color={color} />
+    {label}
+  </button>
+);
+
 const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
   if (!vendor) return null;
+
+  const hasLocation = vendor?.lat != null && vendor?.lng != null;
+  const osmSrc = hasLocation
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${vendor.lng - 0.012},${vendor.lat - 0.012},${vendor.lng + 0.012},${vendor.lat + 0.012}&layer=mapnik&marker=${vendor.lat},${vendor.lng}`
+    : null;
+
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="vendor-detail-title">
-      <div className="absolute inset-0 bg-foreground opacity-50" onClick={onClose} aria-hidden="true" />
-      <div className="relative bg-card border border-border rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
-          <h2 id="vendor-detail-title" className="font-heading font-semibold text-xl text-foreground">Vendor Profile</h2>
-          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-all" aria-label="Close">
+    <div
+      className="fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: 9999, background: 'rgba(0,0,0,0.7)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="vendor-detail-title"
+    >
+      {/* Backdrop */}
+      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
+
+      {/* Modal */}
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] rounded-xl shadow-2xl flex flex-col overflow-hidden"
+        style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.35)' }}
+      >
+        {/* Header — sticky */}
+        <div
+          className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(201,168,76,0.2)', background: '#1B2A8B' }}
+        >
+          <h2 id="vendor-detail-title" className="font-heading font-semibold text-lg" style={{ color: '#FFFFFF' }}>
+            Vendor Profile
+          </h2>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-lg transition-all hover:bg-white/10"
+            style={{ color: '#9BA4E8' }}
+            aria-label="Close"
+          >
             <Icon name="X" size={18} />
           </button>
         </div>
-        {/* Body */}
-        <div className="p-5 flex flex-col gap-5">
-          {/* Business Info */}
+
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-5 flex flex-col gap-5">
+
+          {/* Business header */}
           <div className="flex items-start gap-4">
-            <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 border border-border">
+            <div
+              className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0"
+              style={{ border: '1px solid rgba(201,168,76,0.3)', background: 'rgba(201,168,76,0.08)' }}
+            >
               <Image src={vendor?.photo} alt={vendor?.photoAlt} className="w-full h-full object-cover" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h3 className="font-heading font-semibold text-lg text-foreground">{vendor?.businessName}</h3>
+              <h3 className="font-heading font-semibold text-base mb-1 truncate" style={{ color: '#FFFFFF' }}>
+                {vendor?.businessName}
+              </h3>
+              <div className="flex flex-wrap items-center gap-1.5 mb-1">
                 <StatusBadge status={vendor?.approvalStatus} />
                 <StatusBadge status={vendor?.subscriptionStatus} />
               </div>
-              <p className="text-sm text-muted-foreground font-body">{vendor?.cuisineType} &bull; {vendor?.parish}</p>
-              <p className="text-sm text-muted-foreground font-body">{vendor?.email}</p>
+              {(vendor?.cuisineType || vendor?.parish) && (
+                <p className="text-xs" style={{ color: '#9BA4E8' }}>
+                  {[vendor?.cuisineType, vendor?.parish].filter(Boolean).join(' · ')}
+                </p>
+              )}
+              <p className="text-xs mt-0.5" style={{ color: '#9BA4E8' }}>{vendor?.email}</p>
             </div>
           </div>
-          {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {[
-              { label: 'Owner', value: vendor?.ownerName },
-              { label: 'Phone', value: vendor?.phone },
-              { label: 'WhatsApp', value: vendor?.whatsapp },
-              { label: 'Instagram', value: vendor?.instagram },
-              { label: 'Address', value: vendor?.address },
-              { label: 'Submitted', value: vendor?.submittedDate },
-            ]?.map(({ label, value }) => (
-              <div key={label}>
-                <p className="text-xs text-muted-foreground font-caption uppercase tracking-wide">{label}</p>
-                <p className="text-sm text-foreground font-body mt-0.5">{value || '—'}</p>
-              </div>
-            ))}
+
+          {/* Details grid */}
+          <div
+            className="rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4"
+            style={{ background: 'rgba(15,26,92,0.5)', border: '1px solid rgba(201,168,76,0.15)' }}
+          >
+            <Field label="Owner" value={vendor?.ownerName} />
+            <Field label="Phone" value={vendor?.phone} />
+            <Field label="WhatsApp" value={vendor?.whatsapp} />
+            <Field label="Instagram" value={vendor?.instagram ? `@${vendor.instagram.replace(/^@/, '')}` : ''} />
+            <Field label="Address" value={vendor?.address} />
+            <Field label="Submitted" value={vendor?.submittedDate} />
           </div>
+
           {/* Description */}
-          <div>
-            <p className="text-xs text-muted-foreground font-caption uppercase tracking-wide mb-1">Description</p>
-            <p className="text-sm text-foreground font-body leading-relaxed">{vendor?.description}</p>
-          </div>
+          {vendor?.description ? (
+            <div className="rounded-xl p-4" style={{ background: 'rgba(15,26,92,0.5)', border: '1px solid rgba(201,168,76,0.15)' }}>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(155,164,232,0.6)' }}>
+                Description
+              </p>
+              <p className="text-sm leading-relaxed" style={{ color: '#FFFFFF' }}>{vendor?.description}</p>
+            </div>
+          ) : null}
+
           {/* Map */}
           <div>
-            <p className="text-xs text-muted-foreground font-caption uppercase tracking-wide mb-2">Location</p>
-            <div className="w-full h-48 rounded-lg overflow-hidden border border-border">
-              <iframe
-                width="100%"
-                height="100%"
-                loading="lazy"
-                title={`${vendor?.businessName} location map`}
-                referrerPolicy="no-referrer-when-downgrade"
-                src={`https://www.google.com/maps?q=${vendor?.lat},${vendor?.lng}&z=14&output=embed`}
-              />
+            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(155,164,232,0.6)' }}>
+              Location
+            </p>
+            <div
+              className="w-full h-52 rounded-xl overflow-hidden"
+              style={{ border: '1px solid rgba(201,168,76,0.2)', background: 'rgba(15,26,92,0.5)' }}
+            >
+              {osmSrc ? (
+                <iframe
+                  width="100%"
+                  height="100%"
+                  loading="lazy"
+                  title={`${vendor?.businessName} location`}
+                  src={osmSrc}
+                  style={{ border: 'none', display: 'block' }}
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <Icon name="MapPin" size={24} color="#9BA4E8" />
+                  <p className="text-sm" style={{ color: '#9BA4E8' }}>
+                    {vendor?.address || 'No location set'}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>
-        {/* Footer Actions */}
-        <div className="flex gap-3 justify-end p-5 border-t border-border sticky bottom-0 bg-card">
-          <Button variant="outline" size="sm" onClick={onClose}>Close</Button>
+
+        {/* Footer — sticky */}
+        <div
+          className="flex items-center justify-end gap-2 px-5 py-4 flex-shrink-0"
+          style={{ borderTop: '1px solid rgba(201,168,76,0.2)', background: '#1B2A8B' }}
+        >
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/10"
+            style={{ color: '#9BA4E8', border: '1px solid rgba(155,164,232,0.3)' }}
+          >
+            Close
+          </button>
+
           {vendor?.approvalStatus === 'pending' && (
-            <Button variant="success" size="sm" iconName="CheckCircle" iconPosition="left" onClick={() => onApprove(vendor?.id)}>
-              Approve
-            </Button>
+            <ActionButton
+              onClick={() => onApprove(vendor?.id)}
+              icon="CheckCircle"
+              label="Approve"
+              bg="#10B981"
+              color="#FFFFFF"
+            />
           )}
           {vendor?.approvalStatus === 'approved' && (
-            <Button variant="destructive" size="sm" iconName="Ban" iconPosition="left" onClick={() => onDisable(vendor?.id)}>
-              Disable
-            </Button>
+            <ActionButton
+              onClick={() => onDisable(vendor?.id)}
+              icon="Ban"
+              label="Disable"
+              bg="rgba(248,113,113,0.15)"
+              color="#F87171"
+            />
           )}
           {vendor?.approvalStatus === 'disabled' && (
-            <Button variant="success" size="sm" iconName="CheckCircle" iconPosition="left" onClick={() => onApprove(vendor?.id)}>
-              Re-enable
-            </Button>
+            <ActionButton
+              onClick={() => onApprove(vendor?.id)}
+              icon="CheckCircle"
+              label="Re-enable"
+              bg="#10B981"
+              color="#FFFFFF"
+            />
           )}
         </div>
       </div>

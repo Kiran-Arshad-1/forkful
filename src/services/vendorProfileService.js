@@ -4,9 +4,9 @@ const PROFILE_TABLE  = 'vendor_profiles';
 const HOURS_TABLE    = 'vendor_opening_hours';
 const MENU_TABLE     = 'menu_items';
 const GALLERY_TABLE  = 'gallery_photos';
-const BANNER_BUCKET  = 'vendor-banners';
-const MENU_BUCKET    = 'menu-item-images';
 const GALLERY_BUCKET = 'gallery-photos';
+const BANNER_BUCKET  = GALLERY_BUCKET;   // reuses gallery-photos bucket under _banners/ prefix
+const MENU_BUCKET    = GALLERY_BUCKET;   // reuses gallery-photos bucket under _menu/ prefix
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -129,7 +129,7 @@ export async function deleteMenuItem(itemId) {
 
 export async function uploadBannerImage(vendorId, file) {
   const ext  = file.name.split('.').pop() ?? 'jpg';
-  const path = `${vendorId}/banner.${ext}`;
+  const path = `_banners/${vendorId}/banner.${ext}`;
 
   const { error } = await supabase.storage
     .from(BANNER_BUCKET)
@@ -143,7 +143,7 @@ export async function uploadBannerImage(vendorId, file) {
 
 export async function uploadMenuItemImage(menuItemId, file) {
   const ext  = file.name.split('.').pop() ?? 'jpg';
-  const path = `${menuItemId}/image.${ext}`;
+  const path = `_menu/${menuItemId}/image.${ext}`;
 
   const { error } = await supabase.storage
     .from(MENU_BUCKET)
@@ -232,11 +232,13 @@ export async function uploadGalleryPhoto(file, username, caption) {
 }
 
 export async function deleteGalleryPhoto(id, storagePath) {
-  const { error: storageError } = await supabase.storage
-    .from(GALLERY_BUCKET)
-    .remove([storagePath]);
-
-  if (storageError) throw storageError;
+  // Remove from storage only when the path is known; a missing file is not fatal.
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage
+      .from(GALLERY_BUCKET)
+      .remove([storagePath]);
+    if (storageError) console.warn('[gallery] storage delete failed:', storageError.message);
+  }
 
   const { error } = await supabase
     .from(GALLERY_TABLE)

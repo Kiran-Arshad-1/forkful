@@ -7,6 +7,7 @@ import Icon from 'components/AppIcon';
 
 
 import MetricsPanel from './components/MetricsPanel';
+import PhotoApprovalsPanel from './components/PhotoApprovalsPanel';
 
 import ConfirmModal from './components/ConfirmModal';
 import VendorDetailModal from './components/VendorDetailModal';
@@ -19,29 +20,33 @@ const mapProfile = (p) => ({
   businessName: p.business_name || '',
   ownerName: p.full_name || '',
   email: p.email || '',
-  phone: p.contact_phone || '',
-  whatsapp: p.contact_phone || '',
-  instagram: '',
-  cuisineType: '',
-  parish: '',
-  address: '',
-  description: '',
+  phone: p.phone || p.contact_phone || '',
+  whatsapp: p.whatsapp || '',
+  instagram: p.instagram || '',
+  cuisineType: p.cuisine_type || '',
+  parish: p.parish || '',
+  address: p.address || '',
+  description: p.description || '',
   approvalStatus: p.approval_status,
   subscriptionStatus: 'trial',
   submittedDate: p.created_at
     ? new Date(p.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
     : '',
-  photo: '',
+  photo: p.banner_image_url || '',
   photoAlt: p.business_name || '',
   is_listed: p.is_listed,
+  lat: p.latitude ?? null,
+  lng: p.longitude ?? null,
 });
 
 
 const SECTIONS = [
-{ id: 'overview', label: 'Overview', icon: 'LayoutDashboard' },
-{ id: 'approvals', label: 'Vendor Approvals', icon: 'ClipboardCheck' },
-{ id: 'vendors', label: 'All Vendors', icon: 'Store' },
-{ id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard' }];
+{ id: 'overview',        label: 'Overview',         icon: 'LayoutDashboard' },
+{ id: 'approvals',       label: 'Vendor Approvals',  icon: 'ClipboardCheck'  },
+{ id: 'photo-approvals', label: 'Photo Approvals',   icon: 'Camera'          },
+{ id: 'vendors',         label: 'All Vendors',       icon: 'Store'           },
+{ id: 'subscriptions',   label: 'Subscriptions',     icon: 'CreditCard'      },
+];
 
 
 const AdminDashboard = () => {
@@ -60,6 +65,8 @@ const AdminDashboard = () => {
   const [subscriptionFilter, setSubscriptionFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [selectedIds, setSelectedIds] = useState([]);
+
+  const [pendingPhotosCount, setPendingPhotosCount] = useState(0);
 
   const [detailVendor, setDetailVendor] = useState(null);
   const [confirmModal, setConfirmModal] = useState({ open: false, type: null, vendorId: null, vendorName: '' });
@@ -183,6 +190,7 @@ const AdminDashboard = () => {
               <h1 className="font-heading font-bold text-2xl" style={{ color: '#FFFFFF' }}>
                 {activeSection === 'overview' && 'Dashboard Overview'}
                 {activeSection === 'approvals' && `Vendor Approvals ${pendingCount > 0 ? `(${pendingCount} pending)` : ''}`}
+                {activeSection === 'photo-approvals' && `Photo Approvals ${pendingPhotosCount > 0 ? `(${pendingPhotosCount} pending)` : ''}`}
                 {activeSection === 'vendors' && 'All Vendors'}
                 {activeSection === 'subscriptions' && 'Subscription Management'}
               </h1>
@@ -191,6 +199,15 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
+              {pendingPhotosCount > 0 && activeSection !== 'photo-approvals' &&
+              <button
+                onClick={() => setActiveSection('photo-approvals')}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
+                style={{ background: 'rgba(155,164,232,0.15)', border: '1px solid rgba(155,164,232,0.4)', color: '#9BA4E8' }}>
+                  <Icon name="Camera" size={16} color="#9BA4E8" />
+                  {pendingPhotosCount} photo{pendingPhotosCount > 1 ? 's' : ''} pending
+                </button>
+              }
               {pendingCount > 0 && activeSection !== 'approvals' &&
               <button
                 onClick={() => setActiveSection('approvals')}
@@ -223,6 +240,11 @@ const AdminDashboard = () => {
                 {s?.id === 'approvals' && pendingCount > 0 &&
               <span className="ml-1 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#F87171' }}>
                     {pendingCount}
+                  </span>
+              }
+                {s?.id === 'photo-approvals' && pendingPhotosCount > 0 &&
+              <span className="ml-1 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#9BA4E8' }}>
+                    {pendingPhotosCount}
                   </span>
               }
               </button>
@@ -326,6 +348,10 @@ const AdminDashboard = () => {
               </>
             }
 
+            {activeSection === 'photo-approvals' && (
+              <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
+            )}
+
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
           </div>
         </div>
@@ -347,6 +373,9 @@ const AdminDashboard = () => {
                   {s?.label}
                   {s?.id === 'approvals' && pendingCount > 0 &&
                 <span className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#F87171' }}>{pendingCount}</span>
+                }
+                  {s?.id === 'photo-approvals' && pendingPhotosCount > 0 &&
+                <span className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#9BA4E8' }}>{pendingPhotosCount}</span>
                 }
                 </button>
               )}
@@ -415,6 +444,10 @@ const AdminDashboard = () => {
                 )}
               </>
             }
+
+            {activeSection === 'photo-approvals' && (
+              <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
+            )}
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
           </div>

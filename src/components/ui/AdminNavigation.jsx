@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import Icon from 'components/AppIcon';
+import useAuthStore from '../../store/authStore';
 
 
 const NAV_SECTIONS = [
@@ -21,6 +22,7 @@ const AdminNavigation = ({ isCollapsed = false, onToggleCollapse, activeSection 
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const { signOut, profile } = useAuthStore();
 
   const isActive = (item) => {
     if (item?.path === '/admin-dashboard' && !location?.search) {
@@ -35,7 +37,8 @@ const AdminNavigation = ({ isCollapsed = false, onToggleCollapse, activeSection 
     setMobileOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut();
     navigate('/vendor-login');
   };
 
@@ -165,24 +168,31 @@ const AdminNavigation = ({ isCollapsed = false, onToggleCollapse, activeSection 
           ))}
 
           {/* User / Logout */}
-          <div className={`flex items-center gap-3 px-4 py-3 mt-1 ${isCollapsed ? 'justify-center' : ''}`} style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
-            <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#C9A84C' }}>
-              <Icon name="User" size={16} color="#0F1A5C" />
-            </div>
+          <div className={`px-3 py-3 mt-1`} style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
             {!isCollapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-semibold truncate font-body" style={{ color: '#FFFFFF' }}>Admin User</p>
-                <p className="text-xs truncate font-caption" style={{ color: '#9BA4E8' }}>admin@forkful.com</p>
+              <div className="flex items-center gap-2 px-1 py-2 mb-1">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: '#C9A84C' }}>
+                  <Icon name="User" size={16} color="#0F1A5C" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold truncate font-body" style={{ color: '#FFFFFF' }}>
+                    {profile?.full_name || profile?.business_name || 'Admin'}
+                  </p>
+                  <p className="text-xs truncate font-caption" style={{ color: '#9BA4E8' }}>
+                    {profile?.email || 'admin'}
+                  </p>
+                </div>
               </div>
             )}
             <button
-              className="flex items-center justify-center w-8 h-8 rounded-md transition-all duration-250 flex-shrink-0"
-              style={{ color: '#9BA4E8' }}
               onClick={handleLogout}
+              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all hover:bg-red-500/10 ${isCollapsed ? 'justify-center' : ''}`}
+              style={{ color: '#F87171', border: '1px solid rgba(248,113,113,0.2)' }}
               aria-label="Sign out"
               title="Sign out"
             >
-              <Icon name="LogOut" size={16} />
+              <Icon name="LogOut" size={16} color="#F87171" />
+              {!isCollapsed && <span>Sign Out</span>}
             </button>
           </div>
         </div>
