@@ -9,15 +9,15 @@ const DEFAULT_HOURS = DAYS.reduce((acc, day) => {
 }, {});
 
 const useVendorProfileStore = create((set, get) => ({
-  profile:      null,
-  vendorId:     null,   // vendors(id) — used for reviews FK
-  openingHours: DEFAULT_HOURS,
-  menuItems:    [],
-  photos:       [],
-  reviews:      [],
-  isLoading:    false,
-  isSaving:     false,
-  error:        null,
+  profile:         null,
+  vendorId:        null,   // vendors(id) — used for reviews FK
+  openingHours:    DEFAULT_HOURS,
+  menuItems:       [],
+  photos:          [],
+  reviews:         [],
+  isLoading:       false,
+  isSaving:        false,
+  error:           null,
 
   clearError: () => set({ error: null }),
 

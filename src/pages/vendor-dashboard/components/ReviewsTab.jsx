@@ -4,6 +4,7 @@ import Icon from 'components/AppIcon';
 import Image from 'components/AppImage';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
+import { ReviewsSkeleton } from 'components/ui/Shimmer';
 
 const StarRating = ({ rating, size = 16 }) => (
   <div className="flex items-center gap-0.5">
@@ -45,16 +46,19 @@ const ReviewsTab = () => {
     profile,
     fetchProfile,
     fetchReviews,
-    isLoading,
   } = useVendorProfileStore();
 
+  const [tabLoading, setTabLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
-  // Load profile (for vendorId) then reviews
   useEffect(() => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
-    if (vendorId)  { fetchReviews(); }
+    if (vendorId) {
+      fetchReviews().finally(() => setTabLoading(false));
+    } else {
+      setTabLoading(false);
+    }
   }, [user?.id, profile?.id, vendorId]);
 
   // ── Derived stats ────────────────────────────────────────────────────────────
@@ -75,21 +79,10 @@ const ReviewsTab = () => {
     ? reviews
     : reviews.filter((r) => r.rating === parseInt(filter));
 
-  // ── Loading state ─────────────────────────────────────────────────────────
-  if (isLoading && reviews.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <div
-          className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin mb-3"
-          style={{ borderColor: '#C9A84C', borderTopColor: 'transparent' }}
-        />
-        <p className="text-sm" style={{ color: '#9BA4E8' }}>Loading reviews…</p>
-      </div>
-    );
-  }
+  if (tabLoading) return <ReviewsSkeleton />;
 
   // ── No vendor account linked ──────────────────────────────────────────────
-  if (!vendorId && !isLoading) {
+  if (!vendorId && !tabLoading) {
     return (
       <div
         className="rounded-xl flex flex-col items-center justify-center py-16"

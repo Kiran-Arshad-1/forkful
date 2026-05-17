@@ -96,17 +96,29 @@ const VendorDashboard = () => {
     navigate('/vendor-login');
   };
 
-  const renderTab = () => {
-    switch (activeTab) {
-      case 'business-profile': return <BusinessProfileTab approvalStatus={approvalStatus} />;
-      case 'menu':             return <MenuTab />;
-      case 'photos':           return <PhotosTab />;
-      case 'billing':          return <BillingTab />;
-      case 'insights':         return <InsightsTab />;
-      case 'reviews':          return <ReviewsTab />;
-      default:                 return <BusinessProfileTab approvalStatus={approvalStatus} />;
-    }
-  };
+  // Always-mounted tabs — never unmount so tab state and fetched data survive tab switches
+  const tabs = (
+    <>
+      <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
+        <BusinessProfileTab approvalStatus={approvalStatus} />
+      </div>
+      <div style={{ display: activeTab === 'menu' ? 'block' : 'none' }}>
+        <MenuTab />
+      </div>
+      <div style={{ display: activeTab === 'photos' ? 'block' : 'none' }}>
+        <PhotosTab />
+      </div>
+      <div style={{ display: activeTab === 'billing' ? 'block' : 'none' }}>
+        <BillingTab />
+      </div>
+      <div style={{ display: activeTab === 'insights' ? 'block' : 'none' }}>
+        <InsightsTab />
+      </div>
+      <div style={{ display: activeTab === 'reviews' ? 'block' : 'none' }}>
+        <ReviewsTab />
+      </div>
+    </>
+  );
 
   // ── Avatar helper ─────────────────────────────────────────────────────────────
   const AvatarCircle = ({ size = 8, textSize = 'xs' }) =>
@@ -266,7 +278,7 @@ const VendorDashboard = () => {
         </div>
 
         <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-          {renderTab()}
+          {tabs}
         </div>
       </main>
 

@@ -41,11 +41,11 @@ const mapProfile = (p) => ({
 
 
 const SECTIONS = [
-{ id: 'overview',        label: 'Overview',         icon: 'LayoutDashboard' },
-{ id: 'approvals',       label: 'Vendor Approvals',  icon: 'ClipboardCheck'  },
-{ id: 'photo-approvals', label: 'Photo Approvals',   icon: 'Camera'          },
-{ id: 'vendors',         label: 'All Vendors',       icon: 'Store'           },
-{ id: 'subscriptions',   label: 'Subscriptions',     icon: 'CreditCard'      },
+  { id: 'overview',        label: 'Overview',        shortLabel: 'Overview',   icon: 'LayoutDashboard' },
+  { id: 'approvals',       label: 'Vendor Approvals', shortLabel: 'Approvals',  icon: 'ClipboardCheck'  },
+  { id: 'photo-approvals', label: 'Photo Approvals',  shortLabel: 'Photos',     icon: 'Camera'          },
+  { id: 'vendors',         label: 'All Vendors',      shortLabel: 'Vendors',    icon: 'Store'           },
+  { id: 'subscriptions',   label: 'Subscriptions',    shortLabel: 'Billing',    icon: 'CreditCard'      },
 ];
 
 
@@ -348,41 +348,60 @@ const AdminDashboard = () => {
               </>
             }
 
-            {activeSection === 'photo-approvals' && (
+            {/* Always mounted — preserves fetched data across tab switches */}
+            <div style={{ display: activeSection === 'photo-approvals' ? 'block' : 'none' }}>
               <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
-            )}
+            </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
           </div>
         </div>
 
         {/* Mobile Layout */}
-        <div className="lg:hidden pt-16">
-          <div className="sticky top-16 z-50 px-4 py-3" style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(201,168,76,0.3)' }}>
-            <div className="overflow-x-auto flex gap-2 pb-1" style={{ scrollbarWidth: 'none' }}>
-              {SECTIONS?.map((s) =>
-              <button
-                key={s?.id}
-                onClick={() => setActiveSection(s?.id)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                style={{
-                  background: activeSection === s?.id ? '#C9A84C' : 'rgba(155,164,232,0.1)',
-                  color: activeSection === s?.id ? '#0F1A5C' : '#9BA4E8'
-                }}>
-                  <Icon name={s?.icon} size={13} color={activeSection === s?.id ? '#0F1A5C' : '#9BA4E8'} />
-                  {s?.label}
-                  {s?.id === 'approvals' && pendingCount > 0 &&
-                <span className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#F87171' }}>{pendingCount}</span>
-                }
-                  {s?.id === 'photo-approvals' && pendingPhotosCount > 0 &&
-                <span className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#9BA4E8' }}>{pendingPhotosCount}</span>
-                }
-                </button>
-              )}
+        <div className="lg:hidden">
+          <div
+            className="sticky top-0 z-40 py-2.5 pr-3 pl-14"
+            style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(201,168,76,0.25)' }}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {SECTIONS?.map((s) => {
+                const active = activeSection === s?.id;
+                return (
+                  <button
+                    key={s?.id}
+                    onClick={() => setActiveSection(s?.id)}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+                    style={{
+                      background: active ? '#C9A84C' : 'rgba(155,164,232,0.1)',
+                      color:      active ? '#0F1A5C' : '#9BA4E8',
+                      border:     `1px solid ${active ? '#C9A84C' : 'rgba(155,164,232,0.15)'}`,
+                    }}
+                  >
+                    <Icon name={s?.icon} size={13} color={active ? '#0F1A5C' : '#9BA4E8'} />
+                    {s?.shortLabel}
+                    {s?.id === 'approvals' && pendingCount > 0 && (
+                      <span
+                        className="w-4 h-4 rounded-full text-white text-xs flex items-center justify-center font-data"
+                        style={{ background: '#F87171' }}
+                      >
+                        {pendingCount}
+                      </span>
+                    )}
+                    {s?.id === 'photo-approvals' && pendingPhotosCount > 0 && (
+                      <span
+                        className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-data"
+                        style={{ background: '#9BA4E8', color: '#0F1A5C' }}
+                      >
+                        {pendingPhotosCount}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="p-4 flex flex-col gap-4">
+          <div className="p-4 pb-8 flex flex-col gap-4">
             {activeSection === 'overview' &&
             <>
                 <MetricsPanel />
@@ -445,9 +464,10 @@ const AdminDashboard = () => {
               </>
             }
 
-            {activeSection === 'photo-approvals' && (
+            {/* Always mounted — preserves fetched data across tab switches */}
+            <div style={{ display: activeSection === 'photo-approvals' ? 'block' : 'none' }}>
               <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
-            )}
+            </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
           </div>

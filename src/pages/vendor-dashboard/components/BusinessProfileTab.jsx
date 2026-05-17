@@ -3,6 +3,7 @@ import Icon from 'components/AppIcon';
 import Input from 'components/ui/Input';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
+import { BusinessProfileSkeleton } from 'components/ui/Shimmer';
 
 // Barbados parishes
 const PARISHES = [
@@ -299,6 +300,8 @@ const BusinessProfileTab = ({ approvalStatus }) => {
       setSaving(false);
     }
   };
+
+  if (dataLoading) return <BusinessProfileSkeleton />;
 
   return (
     <div className="space-y-6 lg:space-y-8">

@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useReducer, useEffect, useRef } from 'react';
 import Icon from 'components/AppIcon';
 import Image from 'components/AppImage';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
+import { PhotosSkeleton } from 'components/ui/Shimmer';
 
 const STATUS_CONFIG = {
   pending:  { label: 'Pending Review', color: '#C9A84C', bg: 'rgba(201,168,76,0.15)'  },
@@ -11,105 +12,106 @@ const STATUS_CONFIG = {
   hidden:   { label: 'Hidden',         color: '#9BA4E8', bg: 'rgba(155,164,232,0.15)' },
 };
 
+const init = {
+  tabLoading:    true,
+  dragging:      false,
+  uploading:     false,
+  uploadQueue:   [],
+  uploadError:   '',
+  deleteConfirm: null,
+  toast:         null,
+};
+
+const reducer = (s, a) => {
+  switch (a.type) {
+    case 'LOADED':        return { ...s, tabLoading: false };
+    case 'DRAG':          return { ...s, dragging: a.on };
+    case 'QUEUE_SET':     return { ...s, uploadQueue: a.entries, uploadError: '' };
+    case 'QUEUE_CAPTION': return { ...s, uploadQueue: s.uploadQueue.map(e => e.id === a.id ? { ...e, caption: a.value } : e) };
+    case 'QUEUE_REMOVE':  return { ...s, uploadQueue: s.uploadQueue.filter(e => e.id !== a.id) };
+    case 'QUEUE_CLEAR':   return { ...s, uploadQueue: [], uploadError: '' };
+    case 'UPLOAD_START':  return { ...s, uploading: true, uploadError: '' };
+    case 'UPLOAD_DONE':   return { ...s, uploading: false, uploadQueue: [] };
+    case 'UPLOAD_FAIL':   return { ...s, uploading: false, uploadError: a.msg };
+    case 'DELETE_ASK':    return { ...s, deleteConfirm: a.id };
+    case 'DELETE_CANCEL': return { ...s, deleteConfirm: null };
+    case 'DELETE_DONE':   return { ...s, deleteConfirm: null };
+    case 'TOAST':         return { ...s, toast: a.toast };
+    default:              return s;
+  }
+};
+
 const PhotosTab = () => {
   const { user } = useAuthStore();
-  const {
-    profile,
-    photos,
-    fetchProfile,
-    fetchGalleryPhotos,
-    uploadPhoto,
-    deletePhoto,
-  } = useVendorProfileStore();
-
-  const [dragging, setDragging]         = useState(false);
-  const [uploading, setUploading]       = useState(false);
-  const [uploadQueue, setUploadQueue]   = useState([]); // { file, caption, id }
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
-  const [deleting, setDeleting]         = useState(false);
-  const [uploadError, setUploadError]   = useState('');
-  const [toast, setToast]               = useState(null);
+  const { profile, photos, fetchProfile, fetchGalleryPhotos, uploadPhoto, deletePhoto } = useVendorProfileStore();
+  const [state, dispatch] = useReducer(reducer, init);
+  const { tabLoading, dragging, uploading, uploadQueue, uploadError, deleteConfirm, toast } = state;
   const fileInputRef = useRef(null);
 
   const showToast = (msg, isError = false) => {
-    setToast({ msg, isError });
-    setTimeout(() => setToast(null), 3500);
+    dispatch({ type: 'TOAST', toast: { msg, isError } });
+    setTimeout(() => dispatch({ type: 'TOAST', toast: null }), 3500);
   };
 
-  // Load profile then photos
   useEffect(() => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
-    fetchGalleryPhotos();
+    fetchGalleryPhotos().finally(() => dispatch({ type: 'LOADED' }));
   }, [user?.id, profile?.id]);
 
   // ── Drag & drop ─────────────────────────────────────────────────────────────
-  const handleDragOver  = (e) => { e.preventDefault(); setDragging(true); };
-  const handleDragLeave = ()  => setDragging(false);
+  const handleDragOver  = (e) => { e.preventDefault(); dispatch({ type: 'DRAG', on: true }); };
+  const handleDragLeave = () => dispatch({ type: 'DRAG', on: false });
 
   const handleDrop = (e) => {
     e.preventDefault();
-    setDragging(false);
-    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'));
+    dispatch({ type: 'DRAG', on: false });
+    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
     if (files.length > 0) queueFiles(files);
   };
 
   const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files).filter((f) => f.type.startsWith('image/'));
+    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
     if (files.length > 0) queueFiles(files);
     e.target.value = '';
   };
 
   const queueFiles = (files) => {
-    const entries = files.map((file) => ({
+    const entries = files.map(file => ({
       id:      `${Date.now()}-${Math.random()}`,
       file,
       caption: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
     }));
-    setUploadQueue(entries);
+    dispatch({ type: 'QUEUE_SET', entries });
   };
 
   // ── Upload ───────────────────────────────────────────────────────────────────
   const handleUploadAll = async () => {
     if (!uploadQueue.length) return;
-    setUploading(true);
-    setUploadError('');
+    dispatch({ type: 'UPLOAD_START' });
     try {
       for (const entry of uploadQueue) {
         await uploadPhoto(entry.file, entry.caption);
       }
-      setUploadQueue([]);
+      dispatch({ type: 'UPLOAD_DONE' });
     } catch (err) {
-      setUploadError(err?.message || 'Upload failed. Please try again.');
-    } finally {
-      setUploading(false);
+      dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Upload failed. Please try again.' });
     }
-  };
-
-  const handleCaptionChange = (id, value) => {
-    setUploadQueue((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, caption: value } : e))
-    );
-  };
-
-  const removeFromQueue = (id) => {
-    setUploadQueue((prev) => prev.filter((e) => e.id !== id));
   };
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   const handleDelete = async (photo) => {
-    setDeleting(true);
     try {
       await deletePhoto(photo.id, photo.storage_path);
-      setDeleteConfirm(null);
+      dispatch({ type: 'DELETE_DONE' });
       showToast('Photo deleted successfully.');
     } catch (err) {
-      setDeleteConfirm(null);
+      dispatch({ type: 'DELETE_CANCEL' });
       showToast(err?.message || 'Failed to delete photo. Please try again.', true);
-    } finally {
-      setDeleting(false);
     }
   };
+
+  if (tabLoading) return <PhotosSkeleton />;
 
   return (
     <div className="w-full space-y-6">
@@ -183,7 +185,7 @@ const PhotosTab = () => {
         ) : null}
       </div>
 
-      {/* Upload Queue — caption editing before confirming upload */}
+      {/* Upload Queue */}
       {uploadQueue.length > 0 && !uploading && (
         <div className="rounded-xl p-4 md:p-5 space-y-4" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
           <div className="flex items-center justify-between">
@@ -210,17 +212,13 @@ const PhotosTab = () => {
               <input
                 type="text"
                 value={entry.caption}
-                onChange={(e) => handleCaptionChange(entry.id, e.target.value)}
+                onChange={(e) => dispatch({ type: 'QUEUE_CAPTION', id: entry.id, value: e.target.value })}
                 placeholder="Add a caption…"
                 className="flex-1 px-3 py-2 text-sm rounded-lg outline-none"
-                style={{
-                  background: '#0F1A5C',
-                  border: '1px solid rgba(201,168,76,0.3)',
-                  color: '#FFFFFF',
-                }}
+                style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
               />
               <button
-                onClick={() => removeFromQueue(entry.id)}
+                onClick={() => dispatch({ type: 'QUEUE_REMOVE', id: entry.id })}
                 className="w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0"
                 style={{ color: '#9BA4E8' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#F87171'; }}
@@ -248,7 +246,7 @@ const PhotosTab = () => {
               Upload {uploadQueue.length} Photo{uploadQueue.length !== 1 ? 's' : ''}
             </button>
             <button
-              onClick={() => { setUploadQueue([]); setUploadError(''); }}
+              onClick={() => dispatch({ type: 'QUEUE_CLEAR' })}
               className="text-sm px-4 py-2.5 rounded-lg transition-all hover:bg-white/10"
               style={{ color: '#9BA4E8', border: '1px solid rgba(201,168,76,0.25)' }}
             >
@@ -296,7 +294,6 @@ const PhotosTab = () => {
                 className="group relative rounded-xl overflow-hidden"
                 style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.2)' }}
               >
-                {/* Image */}
                 <div className="aspect-square overflow-hidden">
                   <Image
                     src={photo.photo_url}
@@ -305,7 +302,6 @@ const PhotosTab = () => {
                   />
                 </div>
 
-                {/* Caption + status */}
                 <div className="p-2 space-y-1.5">
                   <p className="text-xs font-medium truncate" style={{ color: '#FFFFFF' }}>
                     {photo.caption || '—'}
@@ -314,15 +310,11 @@ const PhotosTab = () => {
                     className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
                     style={{ background: statusCfg.bg, color: statusCfg.color }}
                   >
-                    <span
-                      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-                      style={{ background: statusCfg.color }}
-                    />
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusCfg.color }} />
                     {statusCfg.label}
                   </span>
                 </div>
 
-                {/* Delete overlay */}
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                   {deleteConfirm === photo.id ? (
                     <div className="flex gap-1">
@@ -335,7 +327,7 @@ const PhotosTab = () => {
                         <Icon name="Check" size={13} color="white" />
                       </button>
                       <button
-                        onClick={() => setDeleteConfirm(null)}
+                        onClick={() => dispatch({ type: 'DELETE_CANCEL' })}
                         className="w-7 h-7 flex items-center justify-center rounded-md shadow-md"
                         style={{ background: '#1B2A8B', color: '#FFFFFF' }}
                         aria-label="Cancel"
@@ -345,7 +337,7 @@ const PhotosTab = () => {
                     </div>
                   ) : (
                     <button
-                      onClick={() => setDeleteConfirm(photo.id)}
+                      onClick={() => dispatch({ type: 'DELETE_ASK', id: photo.id })}
                       className="w-7 h-7 flex items-center justify-center rounded-md shadow-md transition-all"
                       style={{ background: 'rgba(15,26,92,0.85)', color: '#F87171' }}
                       aria-label={`Delete photo ${photo.caption}`}

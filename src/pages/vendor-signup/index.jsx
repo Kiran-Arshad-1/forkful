@@ -47,7 +47,7 @@ const VendorSignup = () => {
     <AuthenticationWrapper>
       <div className="w-full">
         <div
-          className="bg-card rounded-2xl border border-border p-6 md:p-8"
+          className="bg-card rounded-2xl border border-border p-6 md:p-8 mt-10"
           style={{ boxShadow: 'var(--shadow-lg)' }}>
 
           {registered ? (

@@ -49,25 +49,21 @@ const PhotoApprovalsPanel = ({ onPendingCountChange }) => {
     setTimeout(() => setToast(null), 3000);
   };
 
-  // ── Fetch counts for all statuses ──────────────────────────────────────────
+  // ── Counts: single query, aggregate in JS (was 4 round-trips, now 1) ─────────
   const fetchCounts = useCallback(async () => {
-    const results = await Promise.all(
-      STATUS_TABS.map(({ id }) =>
-        supabase
-          .from('gallery_photos')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', id)
-      )
-    );
-    const newCounts = {};
-    STATUS_TABS.forEach(({ id }, i) => {
-      newCounts[id] = results[i].count ?? 0;
+    const { data, error } = await supabase
+      .from('gallery_photos')
+      .select('status');
+    if (error) return;
+    const newCounts = { pending: 0, approved: 0, rejected: 0, hidden: 0 };
+    (data ?? []).forEach(({ status }) => {
+      if (status in newCounts) newCounts[status]++;
     });
     setCounts(newCounts);
     onPendingCountChange?.(newCounts.pending);
   }, [onPendingCountChange]);
 
-  // ── Fetch photos for active tab ────────────────────────────────────────────
+  // ── Photos for active tab ──────────────────────────────────────────────────
   const fetchPhotos = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -75,14 +71,20 @@ const PhotoApprovalsPanel = ({ onPendingCountChange }) => {
       .select('*')
       .eq('status', activeTab)
       .order('created_at', { ascending: false });
-
     if (error) { showToast(error.message, true); setLoading(false); return; }
     setPhotos(data ?? []);
     setLoading(false);
   }, [activeTab]);
 
-  useEffect(() => { fetchCounts(); }, [fetchCounts]);
-  useEffect(() => { fetchPhotos(); }, [fetchPhotos]);
+  // On mount: both in parallel (2 queries total, down from 5)
+  useEffect(() => {
+    Promise.all([fetchCounts(), fetchPhotos()]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // On tab switch: only re-fetch the photo list, counts stay cached
+  useEffect(() => {
+    fetchPhotos();
+  }, [fetchPhotos]);
 
   // ── Update status ──────────────────────────────────────────────────────────
   const handleStatusChange = async (photo, newStatus) => {
@@ -121,12 +123,12 @@ const PhotoApprovalsPanel = ({ onPendingCountChange }) => {
     <div className="flex flex-col gap-5">
 
       {/* Status tab bar */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+      <div className="flex flex-wrap gap-2">
         {STATUS_TABS.map(({ id, label, color }) => (
           <button
             key={id}
             onClick={() => setActiveTab(id)}
-            className="flex-shrink-0 flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all"
             style={{
               background:  activeTab === id ? `${color}22` : 'rgba(155,164,232,0.08)',
               color:       activeTab === id ? color : '#9BA4E8',

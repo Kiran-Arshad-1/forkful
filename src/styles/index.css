@@ -18,3 +18,18 @@ body {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+@keyframes shimmer {
+  0%   { background-position: -800px 0; }
+  100% { background-position:  800px 0; }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(155, 164, 232, 0.06) 25%,
+    rgba(155, 164, 232, 0.18) 50%,
+    rgba(155, 164, 232, 0.06) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.6s infinite linear;
+}

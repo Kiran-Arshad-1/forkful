@@ -1,10 +1,54 @@
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import Icon from 'components/AppIcon';
 import Input from 'components/ui/Input';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
+import { MenuSkeleton } from 'components/ui/Shimmer';
 
-const emptyItem = { name: '', description: '', price: '' };
+const emptyForm = { name: '', description: '', price: '' };
+
+const init = {
+  tabLoading:    true,
+  showForm:      false,
+  editingId:     null,
+  formValues:    emptyForm,
+  formErrors:    {},
+  saving:        false,
+  deleteConfirm: null,
+};
+
+const reducer = (s, a) => {
+  switch (a.type) {
+    case 'LOADED':
+      return { ...s, tabLoading: false };
+    case 'FORM_ADD':
+      return { ...s, showForm: true, editingId: null, formValues: emptyForm, formErrors: {} };
+    case 'FORM_EDIT':
+      return { ...s, showForm: true, editingId: a.item.id, formErrors: {},
+        formValues: { name: a.item.name, description: a.item.description ?? '', price: String(a.item.price ?? '') } };
+    case 'FORM_CLOSE':
+      return { ...s, showForm: false, editingId: null, formValues: emptyForm, formErrors: {}, saving: false };
+    case 'FORM_FIELD':
+      return { ...s,
+        formValues: { ...s.formValues, [a.field]: a.value },
+        formErrors: { ...s.formErrors, [a.field]: '' },
+      };
+    case 'FORM_ERRORS':
+      return { ...s, formErrors: a.errors };
+    case 'SAVE_START':
+      return { ...s, saving: true };
+    case 'SAVE_DONE':
+      return { ...s, showForm: false, editingId: null, formValues: emptyForm, formErrors: {}, saving: false };
+    case 'SAVE_FAIL':
+      return { ...s, saving: false };
+    case 'DELETE_ASK':
+      return { ...s, deleteConfirm: a.id };
+    case 'DELETE_CANCEL':
+      return { ...s, deleteConfirm: null };
+    default:
+      return s;
+  }
+};
 
 const MenuTab = () => {
   const { user } = useAuthStore();
@@ -18,86 +62,53 @@ const MenuTab = () => {
     deleteMenuItem,
   } = useVendorProfileStore();
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [form, setForm] = useState(emptyItem);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [state, dispatch] = useReducer(reducer, init);
+  const { tabLoading, showForm, editingId, formValues, formErrors, saving, deleteConfirm } = state;
 
-  // If profile isn't loaded yet (user landed directly on this tab), fetch it first
   useEffect(() => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
-    fetchMenuItems();
+    fetchMenuItems().finally(() => dispatch({ type: 'LOADED' }));
   }, [user?.id, profile?.id]);
 
-  const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-    if (errors?.[field]) setErrors(prev => ({ ...prev, [field]: '' }));
-  };
-
   const validate = () => {
-    const errs = {};
-    if (!form?.name?.trim()) errs.name = 'Item name is required';
-    if (!form?.price?.trim()) errs.price = 'Price is required';
-    else if (isNaN(parseFloat(form?.price)) || parseFloat(form?.price) < 0) errs.price = 'Enter a valid price';
-    return errs;
-  };
-
-  const handleAdd = () => {
-    setEditingId(null);
-    setForm(emptyItem);
-    setErrors({});
-    setShowForm(true);
-  };
-
-  const handleEdit = (item) => {
-    setEditingId(item?.id);
-    setForm({ name: item?.name, description: item?.description, price: String(item?.price ?? '') });
-    setErrors({});
-    setShowForm(true);
+    const errors = {};
+    if (!formValues.name?.trim()) errors.name = 'Item name is required';
+    if (!formValues.price?.trim()) errors.price = 'Price is required';
+    else if (isNaN(parseFloat(formValues.price)) || parseFloat(formValues.price) < 0) errors.price = 'Enter a valid price';
+    return errors;
   };
 
   const handleSave = async () => {
-    const errs = validate();
-    if (Object.keys(errs)?.length > 0) { setErrors(errs); return; }
-    setSaving(true);
+    const errors = validate();
+    if (Object.keys(errors).length > 0) { dispatch({ type: 'FORM_ERRORS', errors }); return; }
+    dispatch({ type: 'SAVE_START' });
     try {
       if (editingId) {
         await updateMenuItem(editingId, {
-          name: form?.name,
-          description: form?.description,
-          price: parseFloat(form?.price),
+          name:        formValues.name,
+          description: formValues.description,
+          price:       parseFloat(formValues.price),
         });
       } else {
         await addMenuItem({
-          name: form?.name,
-          description: form?.description,
-          price: parseFloat(form?.price),
+          name:        formValues.name,
+          description: formValues.description,
+          price:       parseFloat(formValues.price),
         });
       }
-      setShowForm(false);
-      setEditingId(null);
-      setForm(emptyItem);
+      dispatch({ type: 'SAVE_DONE' });
     } catch {
-      // store.error holds the message
-    } finally {
-      setSaving(false);
+      dispatch({ type: 'SAVE_FAIL' });
     }
   };
 
   const handleDelete = async (id) => {
     await deleteMenuItem(id);
-    setDeleteConfirm(null);
+    dispatch({ type: 'DELETE_CANCEL' });
   };
 
-  const handleCancel = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setForm(emptyItem);
-    setErrors({});
-  };
+  if (tabLoading) return <MenuSkeleton />;
 
   return (
     <div className="w-full space-y-4 lg:space-y-6">
@@ -112,7 +123,7 @@ const MenuTab = () => {
         </div>
         {!showForm && (
           <button
-            onClick={handleAdd}
+            onClick={() => dispatch({ type: 'FORM_ADD' })}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
             style={{ background: '#C9A84C', color: '#0F1A5C' }}
           >
@@ -133,36 +144,32 @@ const MenuTab = () => {
               <Input
                 label="Item Name"
                 type="text"
-                value={form?.name}
-                onChange={e => handleChange('name', e?.target?.value)}
+                value={formValues.name}
+                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'name', value: e.target.value })}
                 placeholder="e.g. Jerk Chicken Platter"
-                error={errors?.name}
+                error={formErrors.name}
                 required
               />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>Description</label>
               <textarea
-                value={form?.description}
-                onChange={e => handleChange('description', e?.target?.value)}
+                value={formValues.description}
+                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'description', value: e.target.value })}
                 placeholder="Describe the dish, ingredients, serving size..."
                 rows={3}
                 className="w-full px-3 py-2 text-sm rounded-lg resize-none outline-none transition-all duration-250"
-                style={{
-                  background: '#0F1A5C',
-                  border: '1px solid rgba(201,168,76,0.3)',
-                  color: '#FFFFFF',
-                }}
+                style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
               />
             </div>
             <div>
               <Input
                 label="Price (BDS$)"
                 type="number"
-                value={form?.price}
-                onChange={e => handleChange('price', e?.target?.value)}
+                value={formValues.price}
+                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'price', value: e.target.value })}
                 placeholder="0.00"
-                error={errors?.price}
+                error={formErrors.price}
                 required
               />
             </div>
@@ -178,7 +185,7 @@ const MenuTab = () => {
               {saving ? 'Saving...' : editingId ? 'Update Item' : 'Add Item'}
             </button>
             <button
-              onClick={handleCancel}
+              onClick={() => dispatch({ type: 'FORM_CLOSE' })}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:bg-white/10"
               style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
             >
@@ -205,7 +212,7 @@ const MenuTab = () => {
             Add your first dish to start building your menu
           </p>
           <button
-            onClick={handleAdd}
+            onClick={() => dispatch({ type: 'FORM_ADD' })}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
             style={{ background: '#C9A84C', color: '#0F1A5C' }}
           >
@@ -224,7 +231,6 @@ const MenuTab = () => {
               className="w-full rounded-xl p-4 flex items-start gap-4 transition-all duration-200"
               style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.2)' }}
             >
-              {/* Icon */}
               <div
                 className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
                 style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}
@@ -232,7 +238,6 @@ const MenuTab = () => {
                 <Icon name="UtensilsCrossed" size={18} color="#C9A84C" />
               </div>
 
-              {/* Info */}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF' }}>{item?.name}</p>
                 {item?.description && (
@@ -240,15 +245,13 @@ const MenuTab = () => {
                 )}
               </div>
 
-              {/* Price */}
               <span className="text-sm font-bold whitespace-nowrap flex-shrink-0" style={{ color: '#C9A84C' }}>
                 BDS$ {parseFloat(item?.price ?? 0)?.toFixed(2)}
               </span>
 
-              {/* Actions */}
               <div className="flex items-center gap-1 flex-shrink-0">
                 <button
-                  onClick={() => handleEdit(item)}
+                  onClick={() => dispatch({ type: 'FORM_EDIT', item })}
                   className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
                   style={{ color: '#9BA4E8' }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.15)'}
@@ -269,7 +272,7 @@ const MenuTab = () => {
                       <Icon name="Check" size={14} color="#FFFFFF" />
                     </button>
                     <button
-                      onClick={() => setDeleteConfirm(null)}
+                      onClick={() => dispatch({ type: 'DELETE_CANCEL' })}
                       className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
                       style={{ color: '#9BA4E8' }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
@@ -281,7 +284,7 @@ const MenuTab = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => setDeleteConfirm(item?.id)}
+                    onClick={() => dispatch({ type: 'DELETE_ASK', id: item?.id })}
                     className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
                     style={{ color: '#9BA4E8' }}
                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#F87171'; }}
