@@ -291,6 +291,7 @@ const BusinessProfileTab = ({ approvalStatus }) => {
     setSaving(true);
     setSaveError('');
     try {
+      console.log('sending the form to save', form, hours);
       await saveBusinessProfile(form, hours);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -332,20 +333,20 @@ const BusinessProfileTab = ({ approvalStatus }) => {
             <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
               Business Name
             </label>
-            <div
+            <input type="text"
+            onChange={e=> handleChange('businessName', e?.target.value)}
               className="w-full px-3 py-2 text-sm rounded-lg"
               style={{
                 background: 'rgba(15,26,92,0.5)',
                 border: '1px solid rgba(201,168,76,0.15)',
                 color: '#9BA4E8',
-                cursor: 'not-allowed',
+                
               }}
-            >
-              {form?.businessName || '—'}
-            </div>
-            <p className="text-xs mt-1" style={{ color: 'rgba(155,164,232,0.6)' }}>
-              Business name is set during sign-up and cannot be changed here.
-            </p>
+            />
+              
+              
+            
+            
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>

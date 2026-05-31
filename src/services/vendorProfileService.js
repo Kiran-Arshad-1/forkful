@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 
 const PROFILE_TABLE  = 'vendor_profiles';
+const BUSINESS_TABLE = 'vendors_businesses';
 const HOURS_TABLE    = 'vendor_opening_hours';
 const MENU_TABLE     = 'menu_items';
 const GALLERY_TABLE  = 'gallery_photos';
@@ -16,22 +17,39 @@ export async function fetchVendorProfile(userId) {
   const { data, error } = await supabase
     .from(PROFILE_TABLE)
     .select('*')
-    .eq('user_id', userId)
+    .eq('vendor_id', userId)
     .single();
 
   if (error) throw error;
   return data;
 }
 
-export async function updateVendorProfile(vendorId, updates) {
+export async function updateVendorProfile(userId, updates) {
+  console.log('Updating vendor profile for userId', userId, 'with updates:', updates);
   const { data, error } = await supabase
     .from(PROFILE_TABLE)
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', vendorId)
+    .eq('vendor_id', userId)
     .select()
     .single();
 
   if (error) throw error;
+  return data;
+}
+
+export async function upsertVendorBusiness(ownerId, updates) {
+  console.log('Upserting business profile for ownerId', ownerId, 'with updates:', updates);
+  const { data, error } = await supabase
+    .from(BUSINESS_TABLE)
+    .upsert({ owner_id: ownerId, ...updates }, { onConflict: 'owner_id' })
+    .select()
+    .single();
+
+  if (error){
+    console.error('Error upserting business profile:', error);
+    throw error;
+  }
+  console.log(data,'-------------------data')
   return data;
 }
 
@@ -160,9 +178,9 @@ export async function uploadMenuItemImage(menuItemId, file) {
 
 export async function fetchVendorId(userId) {
   const { data } = await supabase
-    .from('vendor_accounts')
+    .from('vendor_profiles')
     .select('vendor_id')
-    .eq('user_id', userId)
+    .eq('vendor_id', userId)
     .maybeSingle();
   return data?.vendor_id ?? null;
 }

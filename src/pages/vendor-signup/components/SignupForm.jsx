@@ -11,7 +11,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
   const { user } = useAuthStore();
 
   const [form, setForm] = useState({
-    businessName: '',
+   
     fullName: googlePrefill?.fullName || '',
     email: googlePrefill?.email || '',
     phone: '',
@@ -26,7 +26,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
 
   const validate = () => {
     const e = {};
-    if (!form.businessName?.trim()) e.businessName = 'Business name is required.';
+    
     if (!form.fullName?.trim()) e.fullName = 'Full name is required.';
     if (!isGoogle) {
       if (!form.email?.trim()) {
@@ -35,9 +35,13 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         e.email = 'Enter a valid email address.';
       }
     }
-    if (!form.phone?.trim()) {
-      e.phone = 'Phone number is required.';
-    } else if (!/^\+?[\d\s\-()+]{7,20}$/.test(form.phone)) {
+    if (!isGoogle) {
+      if (!form.phone?.trim()) {
+        e.phone = 'Phone number is required.';
+      } else if (!/^\+?[\d\s\-()+]{7,20}$/.test(form.phone)) {
+        e.phone = 'Enter a valid phone number.';
+      }
+    } else if (form.phone?.trim() && !/^\+?[\d\s\-()+]{7,20}$/.test(form.phone)) {
       e.phone = 'Enter a valid phone number.';
     }
     if (!isGoogle) {
@@ -78,8 +82,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         const { data: profile, error } = await supabase
           .from('vendor_profiles')
           .insert({
-            user_id: user.id,
-            business_name: form.businessName.trim(),
+            vendor_id: user.id,
             full_name: form.fullName.trim(),
             email: form.email.trim(),
             contact_phone: form.phone.trim(),
@@ -99,13 +102,12 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         succeeded = true;
       } else {
         // Email/password signup
-        const { error: authError } = await supabase.auth.signUp({
+        const { data, error: authError } = await supabase.auth.signUp({
           email: form.email.trim(),
           password: form.password,
           options: {
             data: {
               role: 'vendor',
-              business_name: form.businessName.trim(),
               full_name: form.fullName.trim(),
               contact_phone: form.phone.trim(),
             },
@@ -120,6 +122,25 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
             setErrors({ submit: authError.message });
           }
           return;
+        }
+
+        const userId = data?.user?.id;
+        if (userId) {
+          const { error: profileError } = await supabase
+            .from('vendor_profiles')
+            .upsert({
+              vendor_id: userId,
+              full_name: form.fullName.trim(),
+              email: form.email.trim(),
+              contact_phone: form.phone.trim(),
+              approval_status: 'pending',
+              is_listed: false,
+            }, { onConflict: 'vendor_id' });
+
+          if (profileError) {
+            setErrors({ submit: profileError.message });
+            return;
+          }
         }
         succeeded = true;
       }
@@ -151,17 +172,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         </div>
       )}
 
-      <Input
-        label="Business Name"
-        type="text"
-        placeholder="e.g. Maria's Kitchen"
-        value={form.businessName}
-        onChange={handleChange('businessName')}
-        error={errors.businessName}
-        required
-        id="businessName"
-        name="businessName"
-      />
+     
 
       <Input
         label="Full Name"
@@ -173,6 +184,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         required
         id="fullName"
         name="fullName"
+        disabled={isGoogle}
       />
 
       {/* Email — read-only for Google users */}
@@ -196,7 +208,7 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         value={form.phone}
         onChange={handleChange('phone')}
         error={errors.phone}
-        required
+        required={!isGoogle}
         id="phone"
         name="phone"
       />

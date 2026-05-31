@@ -27,11 +27,10 @@ const useVendorProfileStore = create((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const profile = seedProfile ?? (await svc.fetchVendorProfile(userId));
-      const [openingHours, vendorId] = await Promise.all([
-        svc.fetchOpeningHours(profile.id),
-        svc.fetchVendorId(userId),
-      ]);
-      set({ profile, openingHours, vendorId, isLoading: false });
+      const profileId = profile?.vendor_id;
+           const openingHours = await svc.fetchOpeningHours(profileId);
+
+      set({ profile, openingHours, vendorId: profileId, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err?.message ?? 'Failed to load profile' });
     }
@@ -39,7 +38,10 @@ const useVendorProfileStore = create((set, get) => ({
 
   // ── One-shot save for the "Save Profile" button (profile + hours in parallel) ─
   saveBusinessProfile: async (form, hours) => {
-    const { profile } = get();
+    const { profile, vendorId } = get();
+    console.log('Saving business profile with form data:', form, 'and hours:', hours);
+    console.log(('profel get', profile.vendor_id));
+    
     if (!profile) return;
     set({ isSaving: true, error: null });
 
@@ -58,10 +60,27 @@ const useVendorProfileStore = create((set, get) => ({
       ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
     };
 
+    const businessUpdates = {
+      name:        form.businessName,
+      description: form.description,
+      category:    form.cuisineType,
+      parish:      form.parish,
+      address:     form.address,
+      phone:       form.phone,
+     
+      ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
+    };
+
     try {
+      const ownerId = profile?.vendor_id ?? vendorId;
+      console.log('vendorid', vendorId, 'ownerId', ownerId);
+      if (!ownerId) throw new Error('Missing vendor owner id for business record');
+      const profileId = profile?.vendor_id
+
       const [updatedProfile] = await Promise.all([
-        svc.updateVendorProfile(profile.id, updates),
-        svc.saveOpeningHours(profile.id, hours),
+        svc.updateVendorProfile(profileId, updates),
+        svc.saveOpeningHours(profileId, hours),
+        svc.upsertVendorBusiness(ownerId, businessUpdates),
       ]);
       set({ profile: updatedProfile, openingHours: hours, isSaving: false });
     } catch (err) {
@@ -74,9 +93,10 @@ const useVendorProfileStore = create((set, get) => ({
   updateBasicInfo: async ({ businessName, description, cuisineType, parish, address }) => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id 
     set({ isSaving: true, error: null });
     try {
-      const updated = await svc.updateVendorProfile(profile.id, {
+      const updated = await svc.updateVendorProfile(profileId, {
         business_name: businessName,
         description,
         cuisine_type: cuisineType,
@@ -93,9 +113,10 @@ const useVendorProfileStore = create((set, get) => ({
   updateLocation: async (lat, lng) => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id
     set({ isSaving: true, error: null });
     try {
-      const updated = await svc.updateVendorProfile(profile.id, { latitude: lat, longitude: lng });
+      const updated = await svc.updateVendorProfile(profileId, { latitude: lat, longitude: lng });
       set({ profile: updated, isSaving: false });
     } catch (err) {
       set({ isSaving: false, error: err?.message });
@@ -106,9 +127,10 @@ const useVendorProfileStore = create((set, get) => ({
   updateContactInfo: async ({ phone, whatsapp, instagram }) => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id;
     set({ isSaving: true, error: null });
     try {
-      const updated = await svc.updateVendorProfile(profile.id, { phone, whatsapp, instagram });
+      const updated = await svc.updateVendorProfile(profileId, { phone, whatsapp, instagram });
       set({ profile: updated, isSaving: false });
     } catch (err) {
       set({ isSaving: false, error: err?.message });
@@ -119,10 +141,11 @@ const useVendorProfileStore = create((set, get) => ({
   saveOpeningHours: async (hours) => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id 
     const previous = get().openingHours;
     set({ openingHours: hours, isSaving: true, error: null }); // optimistic
     try {
-      await svc.saveOpeningHours(profile.id, hours);
+      await svc.saveOpeningHours(profileId, hours);
       set({ isSaving: false });
     } catch (err) {
       set({ openingHours: previous, isSaving: false, error: err?.message });
@@ -134,9 +157,10 @@ const useVendorProfileStore = create((set, get) => ({
   fetchMenuItems: async () => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id
     set({ isLoading: true, error: null });
     try {
-      const menuItems = await svc.fetchMenuItems(profile.id);
+      const menuItems = await svc.fetchMenuItems(profileId);
       set({ menuItems, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err?.message });
@@ -146,9 +170,10 @@ const useVendorProfileStore = create((set, get) => ({
   addMenuItem: async (item) => {
     const { profile } = get();
     if (!profile) throw new Error('Vendor profile not loaded');
+    const profileId = profile?.vendor_id;
     set({ isSaving: true, error: null });
     try {
-      const newItem = await svc.addMenuItem(profile.id, item);
+      const newItem = await svc.addMenuItem(profileId, item);
       set((s) => ({ menuItems: [...s.menuItems, newItem], isSaving: false }));
       return newItem;
     } catch (err) {
@@ -254,10 +279,11 @@ const useVendorProfileStore = create((set, get) => ({
   uploadBannerImage: async (file) => {
     const { profile } = get();
     if (!profile) return;
+    const profileId = profile?.vendor_id 
     set({ isSaving: true, error: null });
     try {
-      const url     = await svc.uploadBannerImage(profile.id, file);
-      const updated = await svc.updateVendorProfile(profile.id, { banner_image_url: url });
+      const url     = await svc.uploadBannerImage(profileId, file);
+      const updated = await svc.updateVendorProfile(profileId, { banner_image_url: url });
       set({ profile: updated, isSaving: false });
     } catch (err) {
       set({ isSaving: false, error: err?.message });

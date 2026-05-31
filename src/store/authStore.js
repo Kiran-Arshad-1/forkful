@@ -8,7 +8,7 @@ const resolveUserRole = async (user) => {
   const { data: vendorProfile, error: vErr } = await supabase
     .from('vendor_profiles')
     .select('*')
-    .eq('user_id', user.id)
+    .eq('vendor_id', user.id)
     .maybeSingle();
 
   if (vErr) console.error('[auth] vendor_profiles lookup failed:', vErr.message);
@@ -53,6 +53,7 @@ const useAuthStore = create((set) => ({
       if (event === 'SIGNED_OUT') {
         set({ user: null, profile: null, role: null, isAuthenticated: false, isLoading: false });
       } else if (event === 'SIGNED_IN' && session?.user) {
+        console.log('[auth] SIGNED_IN:', session.user);
         const { role, profile } = await resolveUserRole(session.user);
         set({ user: session.user, profile, role, isAuthenticated: true, isLoading: false });
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
