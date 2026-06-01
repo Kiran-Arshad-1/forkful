@@ -69,7 +69,7 @@ const MenuTab = () => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
     fetchMenuItems().finally(() => dispatch({ type: 'LOADED' }));
-  }, [user?.id, profile?.id]);
+  }, [user?.id, profile?.vendor_id]);
 
   const validate = () => {
     const errors = {};

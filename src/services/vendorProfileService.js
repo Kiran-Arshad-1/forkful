@@ -8,6 +8,8 @@ const GALLERY_TABLE  = 'gallery_photos';
 const GALLERY_BUCKET = 'gallery-photos';
 const BANNER_BUCKET  = GALLERY_BUCKET;   // reuses gallery-photos bucket under _banners/ prefix
 const MENU_BUCKET    = GALLERY_BUCKET;   // reuses gallery-photos bucket under _menu/ prefix
+const BUSINESS_BUCKET = 'vendor';
+const BUSINESS_PHOTO_PREFIX = 'business-photos';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -219,6 +221,83 @@ export async function fetchGalleryPhotos(username) {
 
   if (error) throw error;
   return data ?? [];
+}
+
+// ─── Business Photos (vendors_businesses.business_images_urls) ───────────────
+
+function buildBusinessPhotoPath(ownerId, fileName, caption) {
+  const ext = fileName?.split('.').pop() || 'jpg';
+  const baseName = caption?.trim()
+    ? caption.trim()
+    : (fileName?.replace(/\.[^/.]+$/, '') || 'photo');
+  const safeBase = baseName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  return `${ownerId}/${BUSINESS_PHOTO_PREFIX}/${Date.now()}-${safeBase}.${ext}`;
+}
+
+export function getBusinessPhotoPublicUrl(path) {
+  const { data } = supabase.storage.from(BUSINESS_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function getBusinessPhotoSignedUrl(path, expiresIn = 3600) {
+  const { data, error } = await supabase.storage
+    .from(BUSINESS_BUCKET)
+    .createSignedUrl(path, expiresIn);
+  if (error) throw error;
+  return data?.signedUrl || '';
+}
+
+export async function fetchBusinessImagePaths(ownerId) {
+  const { data, error } = await supabase
+    .from(BUSINESS_TABLE)
+    .select('business_images_urls')
+    .eq('owner_id', ownerId)
+    .maybeSingle();
+
+  if (error) throw error;
+  return data?.business_images_urls ?? [];
+}
+
+export async function saveBusinessImagePaths(ownerId, paths) {
+  const { data, error } = await supabase
+    .from(BUSINESS_TABLE)
+    .update({ business_images_urls: paths })
+    .eq('owner_id', ownerId)
+    .select('business_images_urls')
+    .single();
+
+  if (error) throw error;
+  return data?.business_images_urls ?? [];
+}
+
+export async function uploadBusinessPhoto(file, ownerId, caption) {
+  console.log('Uploading business photo for ownerId', ownerId);
+  const path = buildBusinessPhotoPath(ownerId, file?.name, caption);
+
+  const { error: storageError } = await supabase.storage
+    .from(BUSINESS_BUCKET)
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (storageError) throw storageError;
+console.log('Storage upload successful, updating database paths...');
+  const currentPaths = await fetchBusinessImagePaths(ownerId);
+  const nextPaths = [...currentPaths, path];
+  await saveBusinessImagePaths(ownerId, nextPaths);
+console.log('Uploaded business photo with path:', path);
+  return { path, publicUrl: getBusinessPhotoPublicUrl(path) };
+}
+
+export async function deleteBusinessPhoto(ownerId, storagePath) {
+  if (storagePath) {
+    const { error: storageError } = await supabase.storage
+      .from(BUSINESS_BUCKET)
+      .remove([storagePath]);
+    if (storageError) console.warn('[business photos] storage delete failed:', storageError.message);
+  }
+
+  const currentPaths = await fetchBusinessImagePaths(ownerId);
+  const nextPaths = currentPaths.filter((path) => path !== storagePath);
+  await saveBusinessImagePaths(ownerId, nextPaths);
 }
 
 export async function uploadGalleryPhoto(file, username, caption) {

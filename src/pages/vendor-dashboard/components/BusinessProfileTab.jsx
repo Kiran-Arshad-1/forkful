@@ -96,7 +96,7 @@ const BusinessProfileTab = ({ approvalStatus }) => {
     });
     setHours(savedHours);
     setDataLoading(false);
-  }, [profile?.id]);
+  }, [profile?.vendor_id]);
 
   // Load Leaflet CSS + JS dynamically
   useEffect(() => {
@@ -280,6 +280,8 @@ const BusinessProfileTab = ({ approvalStatus }) => {
     if (!form?.description?.trim()) errs.description = 'Description is required';
     if (!form?.address?.trim()) errs.address = 'Address is required';
     if (!form?.phone?.trim()) errs.phone = 'Phone number is required';
+    if (!form?.lat?.trim()) errs.lat = 'Latitude is required';
+    if (!form?.lng?.trim()) errs.lng = 'Longitude is required';
     if (form?.lat && isNaN(parseFloat(form?.lat))) errs.lat = 'Invalid latitude';
     if (form?.lng && isNaN(parseFloat(form?.lng))) errs.lng = 'Invalid longitude';
     return errs;
@@ -455,6 +457,7 @@ const BusinessProfileTab = ({ approvalStatus }) => {
             <Input
               label="Latitude"
               type="text"
+              required
               value={form?.lat}
               onChange={e => {
                 handleChange('lat', e?.target?.value);
@@ -478,6 +481,7 @@ const BusinessProfileTab = ({ approvalStatus }) => {
             <Input
               label="Longitude"
               type="text"
+              required
               value={form?.lng}
               onChange={e => {
                 handleChange('lng', e?.target?.value);

@@ -57,7 +57,7 @@ const PhotosTab = () => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
     fetchGalleryPhotos().finally(() => dispatch({ type: 'LOADED' }));
-  }, [user?.id, profile?.id]);
+  }, [user?.id, profile?.vendor_id]);
 
   // ── Drag & drop ─────────────────────────────────────────────────────────────
   const handleDragOver  = (e) => { e.preventDefault(); dispatch({ type: 'DRAG', on: true }); };

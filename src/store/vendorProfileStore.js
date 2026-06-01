@@ -8,6 +8,22 @@ const DEFAULT_HOURS = DAYS.reduce((acc, day) => {
   return acc;
 }, {});
 
+const buildOpeningHoursPayload = (hours) => DAYS.reduce((acc, day) => {
+  const entry = hours?.[day] ?? {};
+  acc[day.toLowerCase()] = {
+    status: entry.closed ? 'closed' : 'open',
+    open_time: entry.open ?? '09:00',
+    close_time: entry.close ?? '21:00',
+  };
+  return acc;
+}, {});
+
+const normalizePhotoCaption = (fileName = '') => {
+  const baseName = fileName.replace(/\.[^/.]+$/, '');
+  const withoutPrefix = baseName.replace(/^\d+-/, '');
+  return withoutPrefix.replace(/[-_]/g, ' ').trim();
+};
+
 const useVendorProfileStore = create((set, get) => ({
   profile:         null,
   vendorId:        null,   // vendors(id) — used for reviews FK
@@ -67,6 +83,7 @@ const useVendorProfileStore = create((set, get) => ({
       parish:      form.parish,
       address:     form.address,
       phone:       form.phone,
+      opening_hours: buildOpeningHoursPayload(hours),
      
       ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
     };
@@ -231,7 +248,17 @@ const useVendorProfileStore = create((set, get) => ({
     if (!profile) return;
     set({ isLoading: true, error: null });
     try {
-      const photos = await svc.fetchGalleryPhotos(profile.business_name);
+      const paths = await svc.fetchBusinessImagePaths(profile.vendor_id);
+      const photos = await Promise.all((paths ?? []).map(async (path) => {
+        const fileName = path.split('/').pop() || '';
+        return {
+          id: path,
+          storage_path: path,
+          photo_url: await svc.getBusinessPhotoSignedUrl(path),
+          caption: normalizePhotoCaption(fileName) || null,
+          status: 'pending',
+        };
+      }));
       set({ photos, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err?.message });
@@ -243,7 +270,16 @@ const useVendorProfileStore = create((set, get) => ({
     if (!profile) throw new Error('No profile loaded');
     set({ isSaving: true, error: null });
     try {
-      const newPhoto = await svc.uploadGalleryPhoto(file, profile.business_name, caption);
+      const result = await svc.uploadBusinessPhoto(file, profile.vendor_id, caption);
+      console.log('got result from uploadBusinessPhoto:', result);
+      const signedUrl = await svc.getBusinessPhotoSignedUrl(result.path);
+      const newPhoto = {
+        id: result.path,
+        storage_path: result.path,
+        photo_url: signedUrl,
+        caption: caption?.trim() || normalizePhotoCaption(file?.name || ''),
+        // status: 'pending',
+      };
       set((s) => ({ photos: [newPhoto, ...s.photos], isSaving: false }));
       return newPhoto;
     } catch (err) {
@@ -253,10 +289,12 @@ const useVendorProfileStore = create((set, get) => ({
   },
 
   deletePhoto: async (id, storagePath) => {
+    const { profile } = get();
     const previous = get().photos;
     set((s) => ({ photos: s.photos.filter((p) => p.id !== id) }));
     try {
-      await svc.deleteGalleryPhoto(id, storagePath);
+      if (!profile) throw new Error('No profile loaded');
+      await svc.deleteBusinessPhoto(profile.vendor_id, storagePath || id);
     } catch (err) {
       set({ photos: previous, error: err?.message });
       throw err;
