@@ -7,21 +7,28 @@ import AdminDashboard from './pages/admin-dashboard';
 import VendorLogin from './pages/vendor-login';
 import VendorDashboard from './pages/vendor-dashboard';
 import VendorSignup from './pages/vendor-signup';
+import PasswordReset from './components/auth/PasswordReset';
 
 const Routes = () => {
   return (
     <BrowserRouter>
       <ErrorBoundary>
-      <ScrollToTop />
-      <RouterRoutes>
-        {/* Define your route here */}
-        <Route path="/" element={<VendorSignup />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/vendor-login" element={<VendorLogin />} />
-        <Route path="/vendor-dashboard" element={<VendorDashboard />} />
-        <Route path="/vendor-signup" element={<VendorSignup />} />
-        <Route path="*" element={<NotFound />} />
-      </RouterRoutes>
+        <ScrollToTop />
+        <RouterRoutes>
+          {/* Vendor routes */}
+          <Route path="/" element={<VendorSignup />} />
+          <Route path="/vendor-login" element={<VendorLogin />} />
+          <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor-signup" element={<VendorSignup />} />
+
+          {/* Shared password reset (vendors + admins) */}
+          <Route path="password-reset" element={<PasswordReset />} />
+
+          {/* Admin routes */}
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+          <Route path="*" element={<NotFound />} />
+        </RouterRoutes>
       </ErrorBoundary>
     </BrowserRouter>
   );

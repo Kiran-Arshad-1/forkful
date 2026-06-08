@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import Icon from 'components/AppIcon';
 import { supabase } from '../../lib/supabase';
-
 const requestSchema = z.object({
   email: z.string().min(1, 'Email is required').email('Enter a valid email address'),
 });
@@ -44,15 +43,33 @@ const PasswordReset = () => {
   const requestForm = useForm({ resolver: zodResolver(requestSchema) });
   const updateForm = useForm({ resolver: zodResolver(updateSchema) });
 
+  const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS?.split(',') ?? [];
+
+
   const onRequest = async ({ email }) => {
     setServerError('');
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/vendor/password-reset`,
-    });
-    if (error) {
-      setServerError(error.message);
-      return;
+    const trimmed = email.trim().toLowerCase();
+
+    // Check if the email belongs to a known account before calling Supabase
+    const isAdmin = ADMIN_EMAILS.includes(trimmed);
+
+    if (!isAdmin) {
+      // Look up vendor_profiles by email
+      const { data } = await supabase
+        .from('vendor_profiles')
+        .select('vendor_id')
+        .eq('email', trimmed)
+        .maybeSingle();
+
+      if (!data) {
+        setServerError('');
+      }
     }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) { setServerError(error.message); return; }
     setPhase('done');
   };
 
@@ -63,9 +80,9 @@ const PasswordReset = () => {
       setServerError(error.message);
       return;
     }
-    // Sign out so user logs in fresh with new password
+    const { data: { user } } = await supabase.auth.getUser();
     await supabase.auth.signOut();
-    navigate('/vendor/login', { state: { toast: 'Password updated. Please sign in.' } });
+    navigate('/vendor-login', { state: { toast: 'Password updated. Please sign in.' } });
   };
 
   return (
@@ -235,7 +252,7 @@ const PasswordReset = () => {
           {phase !== 'update' && (
             <p className="mt-6 text-center text-sm font-body" style={{ color: '#9BA4E8' }}>
               Remember it?{' '}
-              <Link to="/vendor/login" className="font-semibold hover:underline" style={{ color: '#C9A84C' }}>
+              <Link to="/vendor-login" className="font-semibold hover:underline" style={{ color: '#C9A84C' }}>
                 Sign In
               </Link>
             </p>

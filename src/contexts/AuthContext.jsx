@@ -46,7 +46,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(false)
       
       if (session?.user) {
-        profileOperations?.load(session?.user?.id) // Fire-and-forget
+        setTimeout(() => {
+          profileOperations?.load(session?.user?.id) // Fire-and-forget deferred
+        }, 0)
       } else {
         profileOperations?.clear()
       }

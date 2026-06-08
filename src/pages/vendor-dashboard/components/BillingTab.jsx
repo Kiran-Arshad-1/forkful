@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icon from 'components/AppIcon';
+import useAuthStore from '../../../store/authStore';
 
 
 const STATUS_CONFIG = {
@@ -17,6 +18,22 @@ const mockInvoices = [
 ];
 
 const BillingTab = () => {
+  // get subscription expires at from authsotre
+  const { user } = useAuthStore();
+  const subscription = user?.subscription_expires_at;
+  ('subscription expires at is ', subscription);
+
+
+
+  const formatted_subscription_expires_at = subscription ? new Date(subscription).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }) : 'N/A';
+
+
   const [subStatus, setSubStatus] = useState('trial');
   const [activating, setActivating] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -52,7 +69,7 @@ const BillingTab = () => {
           </div>
           <div className="flex-1">
             {subStatus === 'trial' && (
-              <p className="text-sm" style={{ color: '#9BA4E8' }}>Your free trial ends on <strong style={{ color: '#FFFFFF' }}>05/01/2026</strong>. Subscribe to keep your listing active.</p>
+              <p className="text-sm" style={{ color: '#9BA4E8' }}>Your free trial ends on <strong style={{ color: '#FFFFFF' }}>{formatted_subscription_expires_at}</strong>. Subscribe to keep your listing active.</p>
             )}
             {subStatus === 'active' && (
               <p className="text-sm" style={{ color: '#9BA4E8' }}>Next billing date: <strong style={{ color: '#FFFFFF' }}>04/01/2026</strong> — $9.99/month</p>

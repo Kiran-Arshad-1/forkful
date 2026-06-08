@@ -48,29 +48,29 @@ const ReviewsTab = () => {
     fetchReviews,
   } = useVendorProfileStore();
 
-  const [tabLoading, setTabLoading] = useState(true);
+  const [tabLoading, setTabLoading] = useState(false);
   const [filter, setFilter] = useState('all');
 
   useEffect(() => {
     if (!user?.id) return;
     if (!profile) { fetchProfile(user.id); return; }
-    if (vendorId) {
-      fetchReviews().finally(() => setTabLoading(false));
-    } else {
-      setTabLoading(false);
-    }
+    // if (vendorId) {
+    //   fetchReviews().finally(() => setTabLoading(false));
+    // } else {
+    //   setTabLoading(false);
+    // }
   }, [user?.id, profile?.id, vendorId]);
 
   // ── Derived stats ────────────────────────────────────────────────────────────
-  const total     = reviews.length;
+  const total = reviews.length;
   const avgRating = total > 0
     ? (reviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1)
     : '0.0';
 
   const ratingCounts = [5, 4, 3, 2, 1].map((r) => ({
     rating: r,
-    count:  reviews.filter((rv) => rv.rating === r).length,
-    pct:    total > 0
+    count: reviews.filter((rv) => rv.rating === r).length,
+    pct: total > 0
       ? Math.round(reviews.filter((rv) => rv.rating === r).length / total * 100)
       : 0,
   }));
@@ -144,9 +144,9 @@ const ReviewsTab = () => {
               onClick={() => setFilter(f)}
               className="flex-shrink-0 px-3 py-1.5 text-xs font-medium rounded-full border transition-all"
               style={{
-                background:   filter === f ? '#C9A84C' : 'transparent',
-                color:        filter === f ? '#0F1A5C' : '#9BA4E8',
-                borderColor:  filter === f ? '#C9A84C' : 'rgba(201,168,76,0.3)',
+                background: filter === f ? '#C9A84C' : 'transparent',
+                color: filter === f ? '#0F1A5C' : '#9BA4E8',
+                borderColor: filter === f ? '#C9A84C' : 'rgba(201,168,76,0.3)',
               }}
             >
               {f === 'all' ? 'All Reviews' : `${f} ★`}
@@ -180,9 +180,9 @@ const ReviewsTab = () => {
             </div>
           ) : (
             filtered.map((review) => {
-              const name   = review.profiles?.full_name ?? 'Customer';
+              const name = review.profiles?.full_name ?? 'Customer';
               const avatar = review.profiles?.avatar_url ?? null;
-              const date   = review.created_at
+              const date = review.created_at
                 ? format(new Date(review.created_at), 'MM/dd/yyyy')
                 : '';
               const firstTag = review.tags?.[0] ?? null;

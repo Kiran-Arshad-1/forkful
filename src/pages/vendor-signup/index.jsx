@@ -6,7 +6,6 @@ import AuthenticationWrapper from 'components/ui/AuthenticationWrapper';
 import BenefitsList from './components/BenefitsList';
 import SignupForm from './components/SignupForm';
 import TrustBadges from './components/TrustBadges';
-import SuccessBanner from './components/SuccessBanner';
 
 const GoogleIcon = () => (
   <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -24,13 +23,11 @@ const VendorSignup = () => {
 
   const googlePrefill = location.state?.googlePrefill || null;
 
-  const [registered, setRegistered] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState('');
 
-  const handleSuccess = () => setRegistered(true);
-  const handleContinue = () => navigate('/vendor-login');
-  const handleGoogleSuccess = () => navigate('/vendor/pending-approval', { replace: true });
+  const handleSuccess = () => navigate('/vendor-dashboard', { replace: true });
+  const handleGoogleSuccess = () => navigate('/vendor-dashboard', { replace: true });
 
   const handleGoogleSignUp = async () => {
     setGoogleLoading(true);
@@ -50,72 +47,66 @@ const VendorSignup = () => {
           className="bg-card rounded-2xl border border-border p-6 md:p-8 mt-10"
           style={{ boxShadow: 'var(--shadow-lg)' }}>
 
-          {registered ? (
-            <SuccessBanner onContinue={handleContinue} />
-          ) : (
+          {/* Header */}
+          <div className="mb-6 text-center">
+            <h1 className="text-2xl md:text-3xl font-heading font-semibold text-foreground mb-1"
+              style={{ fontFamily: 'var(--font-heading)' }}>
+              List Your Business
+            </h1>
+            <p className="text-sm text-muted-foreground font-body">
+              Join 100+ vendors on ForkFul — start with a free 2-month trial.
+            </p>
+          </div>
+
+          {/* Show Google button only when not in Google prefill mode */}
+          {!googlePrefill && (
             <>
-              {/* Header */}
-              <div className="mb-6 text-center">
-                <h1 className="text-2xl md:text-3xl font-heading font-semibold text-foreground mb-1"
-                  style={{ fontFamily: 'var(--font-heading)' }}>
-                  List Your Business
-                </h1>
-                <p className="text-sm text-muted-foreground font-body">
-                  Join 100+ vendors on ForkFul — start with a free 2-month trial.
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={handleGoogleSignUp}
+                disabled={googleLoading}
+                className="w-full flex items-center justify-center gap-3 h-11 rounded-lg text-sm font-medium transition-all duration-250 mb-4 disabled:opacity-50 hover:opacity-90"
+                style={{ background: '#FFFFFF', color: '#1F2937', border: '1px solid rgba(201,168,76,0.3)' }}
+              >
+                {googleLoading ? (
+                  <div className="w-4 h-4 rounded-full border-2 animate-spin"
+                    style={{ borderColor: '#D1D5DB', borderTopColor: '#4285F4' }} />
+                ) : (
+                  <GoogleIcon />
+                )}
+                {googleLoading ? 'Redirecting to Google…' : 'Sign up with Google'}
+              </button>
 
-              {/* Show Google button only when not in Google prefill mode */}
-              {!googlePrefill && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleGoogleSignUp}
-                    disabled={googleLoading}
-                    className="w-full flex items-center justify-center gap-3 h-11 rounded-lg text-sm font-medium transition-all duration-250 mb-4 disabled:opacity-50 hover:opacity-90"
-                    style={{ background: '#FFFFFF', color: '#1F2937', border: '1px solid rgba(201,168,76,0.3)' }}
-                  >
-                    {googleLoading ? (
-                      <div className="w-4 h-4 rounded-full border-2 animate-spin"
-                        style={{ borderColor: '#D1D5DB', borderTopColor: '#4285F4' }} />
-                    ) : (
-                      <GoogleIcon />
-                    )}
-                    {googleLoading ? 'Redirecting to Google…' : 'Sign up with Google'}
-                  </button>
-
-                  {googleError && (
-                    <p className="text-sm text-center mb-3" style={{ color: '#F87171' }}>{googleError}</p>
-                  )}
-
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-                    <span className="text-xs font-caption" style={{ color: '#9BA4E8' }}>or sign up with email</span>
-                    <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-                  </div>
-                </>
+              {googleError && (
+                <p className="text-sm text-center mb-3" style={{ color: '#F87171' }}>{googleError}</p>
               )}
 
-              <BenefitsList />
-              <SignupForm
-                onSuccess={googlePrefill ? handleGoogleSuccess : handleSuccess}
-                googlePrefill={googlePrefill}
-              />
-
-              <p className="mt-5 text-center text-sm text-muted-foreground font-body">
-                Already have an account?{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/vendor-login')}
-                  className="text-primary font-semibold hover:underline transition-all duration-250"
-                >
-                  Sign in
-                </button>
-              </p>
-
-              <TrustBadges />
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+                <span className="text-xs font-caption" style={{ color: '#9BA4E8' }}>or sign up with email</span>
+                <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+              </div>
             </>
           )}
+
+          <BenefitsList />
+          <SignupForm
+            onSuccess={googlePrefill ? handleGoogleSuccess : handleSuccess}
+            googlePrefill={googlePrefill}
+          />
+
+          <p className="mt-5 text-center text-sm text-muted-foreground font-body">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => navigate('/vendor-login')}
+              className="text-primary font-semibold hover:underline transition-all duration-250"
+            >
+              Sign in
+            </button>
+          </p>
+
+          <TrustBadges />
         </div>
       </div>
     </AuthenticationWrapper>

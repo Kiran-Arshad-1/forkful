@@ -12,7 +12,9 @@ const resolveUserRole = async (user) => {
     .maybeSingle();
 
   if (vErr) console.error('[auth] vendor_profiles lookup failed:', vErr.message);
-  if (vendorProfile) return { role: 'vendor', profile: vendorProfile };
+  if (vendorProfile) {
+    return { role: 'vendor', profile: vendorProfile };
+  }
 
   const { data: adminProfile, error: aErr } = await supabase
     .from('admin_profiles')
@@ -41,24 +43,28 @@ const useAuthStore = create((set) => ({
     set({ isLoading: true });
 
     const { data: { session } } = await supabase.auth.getSession();
-
     if (session?.user) {
       const { role, profile } = await resolveUserRole(session.user);
-      set({ user: session.user, profile, role, isLoading: false, isAuthenticated: true });
+      ('profile for authstore is ', profile, 'and full user is', session?.user);
+
+      set({ user: { ...session.user, subscription_expires_at: profile?.subscription_expires_at }, profile, role, isLoading: false, isAuthenticated: true });
     } else {
       set({ isLoading: false, isAuthenticated: false });
     }
 
-    supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_OUT') {
-        set({ user: null, profile: null, role: null, isAuthenticated: false, isLoading: false });
-      } else if (event === 'SIGNED_IN' && session?.user) {
-        console.log('[auth] SIGNED_IN:', session.user);
-        const { role, profile } = await resolveUserRole(session.user);
-        set({ user: session.user, profile, role, isAuthenticated: true, isLoading: false });
-      } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        set({ user: session.user });
-      }
+    supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(async () => {
+        if (event === 'SIGNED_OUT') {
+          set({ user: null, profile: null, role: null, isAuthenticated: false, isLoading: false });
+        } else if (event === 'SIGNED_IN' && session?.user) {
+          const { role, profile } = await resolveUserRole(session.user);
+          ('[auth] SIGNED_IN:', role);
+
+          set({ user: { ...session.user, subscription_expires_at: profile?.subscription_expires_at }, profile, role, isAuthenticated: true, isLoading: false });
+        } else if (event === 'TOKEN_REFRESHED' && session?.user) {
+          set({ user: session.user });
+        }
+      }, 0);
     });
   },
 
@@ -67,6 +73,14 @@ const useAuthStore = create((set) => ({
     if (error) throw error;
     if (data.user) {
       const { role, profile } = await resolveUserRole(data.user);
+
+      if (profile?.approval_status === 'block') {
+        await supabase.auth.signOut();
+        toast.error('Your account has been blocked. Please contact support.');
+        set({ user: null, profile: null, role: null, isAuthenticated: false });
+        throw new Error('Your account has been blocked. Please contact support.');
+      }
+
       set({ user: data.user, profile, role, isAuthenticated: true, isLoading: false });
     }
     return data;

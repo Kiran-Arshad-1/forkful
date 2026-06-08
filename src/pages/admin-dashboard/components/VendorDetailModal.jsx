@@ -160,34 +160,6 @@ const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
           >
             Close
           </button>
-
-          {vendor?.approvalStatus === 'pending' && (
-            <ActionButton
-              onClick={() => onApprove(vendor?.id)}
-              icon="CheckCircle"
-              label="Approve"
-              bg="#10B981"
-              color="#FFFFFF"
-            />
-          )}
-          {vendor?.approvalStatus === 'approved' && (
-            <ActionButton
-              onClick={() => onDisable(vendor?.id)}
-              icon="Ban"
-              label="Disable"
-              bg="rgba(248,113,113,0.15)"
-              color="#F87171"
-            />
-          )}
-          {vendor?.approvalStatus === 'disabled' && (
-            <ActionButton
-              onClick={() => onApprove(vendor?.id)}
-              icon="CheckCircle"
-              label="Re-enable"
-              bg="#10B981"
-              color="#FFFFFF"
-            />
-          )}
         </div>
       </div>
     </div>

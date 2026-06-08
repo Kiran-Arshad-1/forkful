@@ -13,7 +13,7 @@ import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 
 const VendorDashboard = () => {
-  const [activeTab, setActiveTab]       = useState('business-profile');
+  const [activeTab, setActiveTab] = useState('business-profile');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const navigate = useNavigate();
   const { profile: authProfile, user, signOut } = useAuthStore();
@@ -24,6 +24,8 @@ const VendorDashboard = () => {
     fetchProfile,
     updateBasicInfo,
     uploadBannerImage,
+    vendor_business,
+    isCreatingBusiness,
   } = useVendorProfileStore();
 
   // Load store profile once
@@ -31,24 +33,26 @@ const VendorDashboard = () => {
     if (user?.id && !storeProfile) fetchProfile(user.id);
   }, [user?.id, storeProfile]);
 
-  const profile       = storeProfile || authProfile;
-  const vendorName    = profile?.business_name || user?.email || 'Vendor';
-  const vendorEmail   = profile?.email || user?.email || '';
+  const profile = storeProfile || authProfile;
+  const vendorName = profile?.full_name || user?.email || 'Vendor';
+  const vendorEmail = profile?.email || user?.email || '';
   const approvalStatus = profile?.approval_status || 'pending';
-  const profilePhoto  = storeProfile?.banner_image_url || null;
-  const initials      = vendorName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+  const isOnboarding = isCreatingBusiness; // Dynamic onboarding mode based on store state
+  ('[Dashboard Mode]', { isOnboarding, vendor_business, approvalStatus });
+  const profilePhoto = storeProfile?.banner_image_url || null;
+  const initials = vendorName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   // ── Edit Profile modal ────────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
-  const [editName, setEditName]           = useState('');
-  const [photoFile, setPhotoFile]         = useState(null);
-  const [photoPreview, setPhotoPreview]   = useState(null);
-  const [editError, setEditError]         = useState('');
-  const [editSaving, setEditSaving]       = useState(false);
+  const [editName, setEditName] = useState('');
+  const [photoFile, setPhotoFile] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
+  const [editError, setEditError] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
   const photoInputRef = useRef(null);
 
   const openEditModal = () => {
-    setEditName(storeProfile?.business_name || vendorName);
+    setEditName(storeProfile?.full_name || vendorName);
     setPhotoFile(null);
     setPhotoPreview(storeProfile?.banner_image_url || null);
     setEditError('');
@@ -73,10 +77,10 @@ const VendorDashboard = () => {
       if (nameChanged) {
         await updateBasicInfo({
           businessName: editName.trim(),
-          description:  storeProfile?.description  || '',
-          cuisineType:  storeProfile?.cuisine_type || '',
-          parish:       storeProfile?.parish       || '',
-          address:      storeProfile?.address      || '',
+          description: storeProfile?.description || '',
+          cuisineType: storeProfile?.cuisine_type || '',
+          parish: storeProfile?.parish || '',
+          address: storeProfile?.address || '',
         });
       }
       if (photoFile) {
@@ -100,13 +104,25 @@ const VendorDashboard = () => {
   const tabs = (
     <>
       <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
-        <BusinessProfileTab approvalStatus={approvalStatus} />
+        <BusinessProfileTab
+          approvalStatus={approvalStatus}
+          isOnboarding={isOnboarding}
+          onNext={() => setActiveTab('menu')}
+        />
       </div>
       <div style={{ display: activeTab === 'menu' ? 'block' : 'none' }}>
-        <MenuTab />
+        <MenuTab
+          isOnboarding={isOnboarding}
+          onPrev={() => setActiveTab('business-profile')}
+          onNext={() => setActiveTab('photos')}
+        />
       </div>
       <div style={{ display: activeTab === 'photos' ? 'block' : 'none' }}>
-        <PhotosTab />
+        <PhotosTab
+          isOnboarding={isOnboarding}
+          onPrev={() => setActiveTab('menu')}
+          onSubmitSuccess={() => setActiveTab('business-profile')}
+        />
       </div>
       <div style={{ display: activeTab === 'billing' ? 'block' : 'none' }}>
         <BillingTab />
@@ -158,12 +174,11 @@ const VendorDashboard = () => {
           <div className="flex items-center gap-2 md:gap-3">
             {/* Approval badge */}
             <div
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${
-                approvalStatus === 'approved' ? 'border-emerald-500/30' : 'border-yellow-500/30'
-              }`}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${approvalStatus === 'approved' ? 'border-emerald-500/30' : 'border-yellow-500/30'
+                }`}
               style={{
                 background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-                color:      approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
+                color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
               }}
             >
               <Icon
@@ -224,16 +239,6 @@ const VendorDashboard = () => {
                       Edit Profile
                     </button>
 
-                    {/* Back to Home */}
-                    {/* <button
-                      onClick={() => { setShowUserMenu(false); navigate('/vendor-login'); }}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm transition-all hover:bg-white/10"
-                      style={{ color: '#9BA4E8' }}
-                    >
-                      <Icon name="Home" size={15} color="#9BA4E8" />
-                      Back to Home
-                    </button> */}
-
                     {/* Sign Out */}
                     <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
                       <button
@@ -264,9 +269,9 @@ const VendorDashboard = () => {
         <div
           className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit"
           style={{
-            background:   approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-            color:        approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
-            borderColor:  approvalStatus === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)',
+            background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
+            color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
+            borderColor: approvalStatus === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)',
           }}
         >
           <Icon
@@ -374,7 +379,7 @@ const VendorDashboard = () => {
               {/* Business Name */}
               <div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
-                  Business Name
+                  Name
                 </label>
                 <input
                   type="text"
@@ -383,12 +388,12 @@ const VendorDashboard = () => {
                   placeholder="Enter business name"
                   className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
                   style={{
-                    background:   '#0F1A5C',
-                    border:       '1px solid rgba(201,168,76,0.35)',
-                    color:        '#FFFFFF',
+                    background: '#0F1A5C',
+                    border: '1px solid rgba(201,168,76,0.35)',
+                    color: '#FFFFFF',
                   }}
                   onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
-                  onBlur={(e)  => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                  onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
                 />
               </div>
 

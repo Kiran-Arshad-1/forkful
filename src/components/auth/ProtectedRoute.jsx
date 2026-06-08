@@ -29,6 +29,7 @@ const ProtectedRoute = ({ allowedRoles = [], requireApproved = false }) => {
 
   // No profile resolved (tables missing or user has no profile row) — back to login
   if (!role) {
+    ('found no role in auth store:', { role, profile });
     return <Navigate to="/vendor-login" replace />;
   }
 
@@ -39,14 +40,14 @@ const ProtectedRoute = ({ allowedRoles = [], requireApproved = false }) => {
   }
 
   // Vendor approval gate (only applied to routes that opt-in)
-  if (requireApproved && role === 'vendor' && profile) {
-    if (profile.approval_status === 'pending') {
-      return <Navigate to="/vendor/pending-approval" replace />;
-    }
-    if (profile.approval_status === 'rejected') {
-      return <Navigate to="/vendor/rejected" replace />;
-    }
-  }
+  // if (requireApproved && role === 'vendor' && profile) {
+  //   // if (profile.approval_status === 'pending') {
+  //   //   return <Navigate to="/vendor/pending-approval" replace />;
+  //   // }
+  //   if (profile.approval_status === 'rejected') {
+  //     return <Navigate to="/vendor/rejected" replace />;
+  //   }
+  // }
 
   return <Outlet />;
 };

@@ -5,9 +5,8 @@ import Button from 'components/ui/Button';
 
 const approvalOptions = [
   { value: 'all', label: 'All Statuses' },
-  { value: 'pending', label: 'Pending' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'disabled', label: 'Disabled' },
+  { value: 'active', label: 'Active' },
+  { value: 'block', label: 'Block' },
 ];
 
 const subscriptionOptions = [
@@ -26,6 +25,8 @@ const categoryOptions = [
   { value: 'Cafe', label: 'Cafe' },
   { value: 'Street Food', label: 'Street Food' },
 ];
+
+
 
 const VendorFilters = ({ search, onSearch, approvalFilter, onApprovalFilter, subscriptionFilter, onSubscriptionFilter, categoryFilter, onCategoryFilter, onClearFilters, selectedCount, onBulkApprove }) => (
   <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">

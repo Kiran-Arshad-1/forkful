@@ -4,49 +4,87 @@ import Image from 'components/AppImage';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
 import { PhotosSkeleton } from 'components/ui/Shimmer';
-
 const STATUS_CONFIG = {
-  pending:  { label: 'Pending Review', color: '#C9A84C', bg: 'rgba(201,168,76,0.15)'  },
-  approved: { label: 'Approved',       color: '#10B981', bg: 'rgba(16,185,129,0.15)'  },
-  rejected: { label: 'Rejected',       color: '#F87171', bg: 'rgba(248,113,113,0.15)' },
-  hidden:   { label: 'Hidden',         color: '#9BA4E8', bg: 'rgba(155,164,232,0.15)' },
+  pending: { label: 'Pending Review', color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
+  approved: { label: 'Approved', color: '#10B981', bg: 'rgba(16,185,129,0.15)' },
+  rejected: { label: 'Rejected', color: '#F87171', bg: 'rgba(248,113,113,0.15)' },
+  hidden: { label: 'Hidden', color: '#9BA4E8', bg: 'rgba(155,164,232,0.15)' },
 };
 
 const init = {
-  tabLoading:    true,
-  dragging:      false,
-  uploading:     false,
-  uploadQueue:   [],
-  uploadError:   '',
+  tabLoading: true,
+  dragging: false,
+  uploading: false,
+  uploadQueue: [],
+  uploadError: '',
   deleteConfirm: null,
-  toast:         null,
+  toast: null,
 };
 
 const reducer = (s, a) => {
   switch (a.type) {
-    case 'LOADED':        return { ...s, tabLoading: false };
-    case 'DRAG':          return { ...s, dragging: a.on };
-    case 'QUEUE_SET':     return { ...s, uploadQueue: a.entries, uploadError: '' };
+    case 'LOADED': return { ...s, tabLoading: false };
+    case 'DRAG': return { ...s, dragging: a.on };
+    case 'QUEUE_SET': return { ...s, uploadQueue: a.entries, uploadError: '' };
     case 'QUEUE_CAPTION': return { ...s, uploadQueue: s.uploadQueue.map(e => e.id === a.id ? { ...e, caption: a.value } : e) };
-    case 'QUEUE_REMOVE':  return { ...s, uploadQueue: s.uploadQueue.filter(e => e.id !== a.id) };
-    case 'QUEUE_CLEAR':   return { ...s, uploadQueue: [], uploadError: '' };
-    case 'UPLOAD_START':  return { ...s, uploading: true, uploadError: '' };
-    case 'UPLOAD_DONE':   return { ...s, uploading: false, uploadQueue: [] };
-    case 'UPLOAD_FAIL':   return { ...s, uploading: false, uploadError: a.msg };
-    case 'DELETE_ASK':    return { ...s, deleteConfirm: a.id };
+    case 'QUEUE_REMOVE': return { ...s, uploadQueue: s.uploadQueue.filter(e => e.id !== a.id) };
+    case 'QUEUE_CLEAR': return { ...s, uploadQueue: [], uploadError: '' };
+    case 'UPLOAD_START': return { ...s, uploading: true, uploadError: '' };
+    case 'UPLOAD_DONE': return { ...s, uploading: false, uploadQueue: [] };
+    case 'UPLOAD_FAIL': return { ...s, uploading: false, uploadError: a.msg };
+    case 'DELETE_ASK': return { ...s, deleteConfirm: a.id };
     case 'DELETE_CANCEL': return { ...s, deleteConfirm: null };
-    case 'DELETE_DONE':   return { ...s, deleteConfirm: null };
-    case 'TOAST':         return { ...s, toast: a.toast };
-    default:              return s;
+    case 'DELETE_DONE': return { ...s, deleteConfirm: null };
+    case 'TOAST': return { ...s, toast: a.toast };
+    default: return s;
   }
 };
 
-const PhotosTab = () => {
+const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
   const { user } = useAuthStore();
-  const { profile, photos, fetchProfile, fetchGalleryPhotos, uploadPhoto, deletePhoto } = useVendorProfileStore();
+
+  const {
+    profile,
+    photos,
+    fetchProfile,
+    fetchGalleryPhotos,
+    uploadPhoto,
+    deletePhoto,
+    draftPhotos,
+    setDraftPhotos,
+    submitOnboarding,
+    draftBusinessProfile,
+    draftMenuItems,
+    selectedBusinessId,
+  } = useVendorProfileStore();
   const [state, dispatch] = useReducer(reducer, init);
   const { tabLoading, dragging, uploading, uploadQueue, uploadError, deleteConfirm, toast } = state;
   const fileInputRef = useRef(null);
+
+  const activeQueue = isOnboarding ? draftPhotos : uploadQueue;
+
+  const handleQueueCaption = (id, value) => {
+    if (isOnboarding) {
+      setDraftPhotos(draftPhotos.map(p => p.id === id ? { ...p, caption: value } : p));
+    } else {
+      dispatch({ type: 'QUEUE_CAPTION', id, value });
+    }
+  };
+  const handleQueueRemove = (id) => {
+    if (isOnboarding) {
+      setDraftPhotos(draftPhotos.filter(p => p.id !== id));
+    } else {
+      dispatch({ type: 'QUEUE_REMOVE', id });
+    }
+  };
+
+  const handleQueueClear = () => {
+    if (isOnboarding) {
+      setDraftPhotos([]);
+    } else {
+      dispatch({ type: 'QUEUE_CLEAR' });
+    }
+  };
 
   const showToast = (msg, isError = false) => {
     dispatch({ type: 'TOAST', toast: { msg, isError } });
@@ -54,13 +92,23 @@ const PhotosTab = () => {
   };
 
   useEffect(() => {
-    if (!user?.id) return;
-    if (!profile) { fetchProfile(user.id); return; }
-    fetchGalleryPhotos().finally(() => dispatch({ type: 'LOADED' }));
-  }, [user?.id, profile?.vendor_id]);
+
+    if (isOnboarding) {
+      dispatch({ type: 'LOADED' });
+      return;
+    }
+    if (!selectedBusinessId) {
+      dispatch({ type: 'LOADED' });
+      return;
+    }
+    ('calling gallery photos function');
+
+    fetchGalleryPhotos(selectedBusinessId).finally(() => dispatch({ type: 'LOADED' }));
+  }, [selectedBusinessId, isOnboarding]);
+  // }, []);
 
   // ── Drag & drop ─────────────────────────────────────────────────────────────
-  const handleDragOver  = (e) => { e.preventDefault(); dispatch({ type: 'DRAG', on: true }); };
+  const handleDragOver = (e) => { e.preventDefault(); dispatch({ type: 'DRAG', on: true }); };
   const handleDragLeave = () => dispatch({ type: 'DRAG', on: false });
 
   const handleDrop = (e) => {
@@ -78,30 +126,75 @@ const PhotosTab = () => {
 
   const queueFiles = (files) => {
     const entries = files.map(file => ({
-      id:      `${Date.now()}-${Math.random()}`,
+      id: `${Date.now()}-${Math.random()}`,
       file,
       caption: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
     }));
-    dispatch({ type: 'QUEUE_SET', entries });
+    if (isOnboarding) {
+      setDraftPhotos([...draftPhotos, ...entries]);
+    } else {
+      dispatch({ type: 'QUEUE_SET', entries });
+    }
   };
 
   // ── Upload ───────────────────────────────────────────────────────────────────
   const handleUploadAll = async () => {
-    if (!uploadQueue.length) return;
-    dispatch({ type: 'UPLOAD_START' });
-    try {
-      for (const entry of uploadQueue) {
-        await uploadPhoto(entry.file, entry.caption);
+    if (isOnboarding) {
+      ('upload start and now validating details');
+
+      const businessForm = draftBusinessProfile?.form;
+      if (
+        !businessForm ||
+        !businessForm.businessName?.trim() ||
+        !businessForm.description?.trim() ||
+        !businessForm.address?.trim() ||
+        !businessForm.phone?.trim() ||
+        !businessForm.lat?.trim() ||
+        !businessForm.lng?.trim()
+      ) {
+        showToast('Please complete all required fields in the Business Profile tab.', true);
+        return;
       }
-      dispatch({ type: 'UPLOAD_DONE' });
-    } catch (err) {
-      dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Upload failed. Please try again.' });
+      if (!draftMenuItems || draftMenuItems.length === 0) {
+        showToast('Please add at least one menu item in the Menu tab.', true);
+        return;
+      }
+      if (!draftPhotos || draftPhotos.length < 3) {
+        showToast('Please upload at least 3 photos.', true);
+        return;
+      }
+
+      dispatch({ type: 'UPLOAD_START' });
+      try {
+        let res = await submitOnboarding();
+        ('save response from photos tab', res);
+
+        dispatch({ type: 'UPLOAD_DONE' });
+        showToast('Business setup submitted successfully!');
+        if (onSubmitSuccess) onSubmitSuccess();
+      } catch (err) {
+        dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Setup submission failed. Please try again.' });
+      }
+    }
+    else {
+      if (!uploadQueue.length) return;
+      dispatch({ type: 'UPLOAD_START' });
+      try {
+        for (const entry of uploadQueue) {
+          await uploadPhoto(entry.file, entry.caption);
+        }
+        dispatch({ type: 'UPLOAD_DONE' });
+      } catch (err) {
+        dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Upload failed. Please try again.' });
+      }
     }
   };
 
   // ── Delete ───────────────────────────────────────────────────────────────────
   const handleDelete = async (photo) => {
     try {
+      ('deleting photo in handle delete', photo.id, photo.storage_path);
+
       await deletePhoto(photo.id, photo.storage_path);
       dispatch({ type: 'DELETE_DONE' });
       showToast('Photo deleted successfully.');
@@ -123,17 +216,19 @@ const PhotosTab = () => {
             Business Photos
           </h3>
           <p className="text-xs mt-0.5" style={{ color: '#9BA4E8' }}>
-            {photos.length} photo{photos.length !== 1 ? 's' : ''} uploaded · new photos require admin approval
+            {isOnboarding ? 'Upload photos to showcase your business to customers' : `${photos.length} photo${photos.length !== 1 ? 's' : ''} uploaded · new photos require admin approval`}
           </p>
         </div>
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
-          style={{ background: '#C9A84C', color: '#0F1A5C' }}
-        >
-          <Icon name="Upload" size={15} color="#0F1A5C" />
-          Upload Photos
-        </button>
+        {!isOnboarding && (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
+            style={{ background: '#C9A84C', color: '#0F1A5C' }}
+          >
+            <Icon name="Upload" size={15} color="#0F1A5C" />
+            Upload Photos
+          </button>
+        )}
       </div>
 
       {/* Drop Zone */}
@@ -141,12 +236,12 @@ const PhotosTab = () => {
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        onClick={() => !uploadQueue.length && fileInputRef.current?.click()}
+        onClick={() => !activeQueue.length && fileInputRef.current?.click()}
         className="rounded-xl p-8 text-center transition-all duration-200"
         style={{
           border: `2px dashed ${dragging ? '#C9A84C' : 'rgba(201,168,76,0.35)'}`,
           background: dragging ? 'rgba(201,168,76,0.06)' : 'rgba(27,42,139,0.4)',
-          cursor: uploadQueue.length ? 'default' : 'pointer',
+          cursor: activeQueue.length ? 'default' : 'pointer',
         }}
       >
         <input
@@ -164,10 +259,10 @@ const PhotosTab = () => {
               className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
               style={{ borderColor: '#C9A84C', borderTopColor: 'transparent' }}
             />
-            <p className="text-sm font-medium" style={{ color: '#C9A84C' }}>Uploading photos…</p>
+            <p className="text-sm font-medium" style={{ color: '#C9A84C' }}>{isOnboarding ? 'Submitting and uploading photos…' : 'Uploading photos…'}</p>
             <p className="text-xs" style={{ color: '#9BA4E8' }}>Please wait, do not close this tab</p>
           </div>
-        ) : uploadQueue.length === 0 ? (
+        ) : activeQueue.length === 0 ? (
           <>
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
@@ -186,11 +281,11 @@ const PhotosTab = () => {
       </div>
 
       {/* Upload Queue */}
-      {uploadQueue.length > 0 && !uploading && (
+      {activeQueue.length > 0 && !uploading && (
         <div className="rounded-xl p-4 md:p-5 space-y-4" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
-              Ready to upload — {uploadQueue.length} photo{uploadQueue.length !== 1 ? 's' : ''}
+              Ready to upload — {activeQueue.length} photo{activeQueue.length !== 1 ? 's' : ''}
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}
@@ -201,7 +296,7 @@ const PhotosTab = () => {
             </button>
           </div>
 
-          {uploadQueue.map((entry) => (
+          {activeQueue.map((entry) => (
             <div key={entry.id} className="flex items-center gap-3">
               <img
                 src={URL.createObjectURL(entry.file)}
@@ -212,13 +307,13 @@ const PhotosTab = () => {
               <input
                 type="text"
                 value={entry.caption}
-                onChange={(e) => dispatch({ type: 'QUEUE_CAPTION', id: entry.id, value: e.target.value })}
+                onChange={(e) => handleQueueCaption(entry.id, e.target.value)}
                 placeholder="Add a caption…"
                 className="flex-1 px-3 py-2 text-sm rounded-lg outline-none"
                 style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
               />
               <button
-                onClick={() => dispatch({ type: 'QUEUE_REMOVE', id: entry.id })}
+                onClick={() => handleQueueRemove(entry.id)}
                 className="w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0"
                 style={{ color: '#9BA4E8' }}
                 onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#F87171'; }}
@@ -242,11 +337,20 @@ const PhotosTab = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90"
               style={{ background: '#C9A84C', color: '#0F1A5C' }}
             >
-              <Icon name="Upload" size={15} color="#0F1A5C" />
-              Upload {uploadQueue.length} Photo{uploadQueue.length !== 1 ? 's' : ''}
+              {isOnboarding ? (
+                <>
+                  <Icon name="CheckCircle" size={15} color="#0F1A5C" />
+                  Submit &amp; Publish Profile
+                </>
+              ) : (
+                <>
+                  <Icon name="Upload" size={15} color="#0F1A5C" />
+                  Upload {activeQueue.length} Photo{activeQueue.length !== 1 ? 's' : ''}
+                </>
+              )}
             </button>
             <button
-              onClick={() => dispatch({ type: 'QUEUE_CLEAR' })}
+              onClick={handleQueueClear}
               className="text-sm px-4 py-2.5 rounded-lg transition-all hover:bg-white/10"
               style={{ color: '#9BA4E8', border: '1px solid rgba(201,168,76,0.25)' }}
             >
@@ -257,7 +361,7 @@ const PhotosTab = () => {
       )}
 
       {/* Empty State */}
-      {photos.length === 0 && uploadQueue.length === 0 && !uploading && (
+      {photos.length === 0 && activeQueue.length === 0 && !uploading && (
         <div
           className="rounded-xl flex flex-col items-center justify-center py-14"
           style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.25)' }}
@@ -284,12 +388,13 @@ const PhotosTab = () => {
       )}
 
       {/* Photo Grid */}
-      {photos.length > 0 && (
+      {photos.length > 0 && !isOnboarding && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {photos.map((photo) => {
             const statusCfg = STATUS_CONFIG[photo.status] ?? STATUS_CONFIG.pending;
             return (
-              <div
+
+              < div
                 key={photo.id}
                 className="group relative rounded-xl overflow-hidden"
                 style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.2)' }}
@@ -303,6 +408,7 @@ const PhotosTab = () => {
                 </div>
 
                 <div className="p-2 space-y-1.5">
+
                   <p className="text-xs font-medium truncate" style={{ color: '#FFFFFF' }}>
                     {photo.caption || '—'}
                   </p>
@@ -350,6 +456,32 @@ const PhotosTab = () => {
             );
           })}
         </div>
+      )
+      }
+
+      {/* Wizard Footer Buttons */}
+      {isOnboarding && (
+        <div className="flex items-center justify-between pt-6 mt-6" style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
+          <button
+            onClick={onPrev}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/10 disabled:opacity-50"
+            style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
+          >
+            <Icon name="ArrowLeft" size={16} color="#9BA4E8" />
+            Back
+          </button>
+          {activeQueue.length === 0 && (
+            <button
+              onClick={handleUploadAll}
+              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all hover:opacity-90"
+              style={{ background: '#C9A84C', color: '#0F1A5C' }}
+            >
+              Submit &amp; Publish Profile
+              <Icon name="ArrowRight" size={16} color="#0F1A5C" />
+            </button>
+          )}
+        </div>
       )}
 
       {/* Toast */}
@@ -371,7 +503,7 @@ const PhotosTab = () => {
           {toast.msg}
         </div>
       )}
-    </div>
+    </div >
   );
 };
 
