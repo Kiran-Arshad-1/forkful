@@ -173,7 +173,7 @@ const VendorDashboard = () => {
           {/* Right side */}
           <div className="flex items-center gap-2 md:gap-3">
             {/* Approval badge */}
-            <div
+            {/* <div
               className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${approvalStatus === 'approved' ? 'border-emerald-500/30' : 'border-yellow-500/30'
                 }`}
               style={{
@@ -187,7 +187,7 @@ const VendorDashboard = () => {
                 color={approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
               />
               {approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
-            </div>
+            </div> */}
 
             {/* View Listing */}
             <button
