@@ -78,6 +78,7 @@ const VendorDashboard = () => {
       return;
     }
     setEditError('');
+    setEditSaving(true)
     try {
       const nameChanged = editName.trim() !== (storeProfile?.full_name || '');
       const addressChanged = editAddress.trim() !== (storeProfile?.address || '');
