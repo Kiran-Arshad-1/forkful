@@ -147,6 +147,7 @@ const useVendorProfileStore = create((set, get) => ({
       phone: form.phone,
       opening_hours: buildOpeningHoursPayload(hours),
       status: 'pending',
+      success_story: form.success_story,
 
       ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
     };
@@ -471,17 +472,6 @@ const useVendorProfileStore = create((set, get) => ({
     try {
       const lat = parseFloat(form.lat);
       const lng = parseFloat(form.lng);
-
-      const updates = {
-        description: form.description,
-        cuisine_type: form.cuisineType,
-        parish: form.parish,
-        address: form.address,
-        phone: form.phone,
-        whatsapp: form.whatsapp,
-        instagram: form.instagram,
-        ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
-      };
       let photosResult
       // 3. Upload Business Photos
       (`[onboarding] uploading ${draftPhotos.length} photos...`);
@@ -503,6 +493,7 @@ const useVendorProfileStore = create((set, get) => ({
         business_images_urls: pubUrls,
         email: profile.email,
         status: 'pending',
+        success_story: form.success_story,
         created_at: new Date().toISOString(),
         ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
       };

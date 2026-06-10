@@ -66,6 +66,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     phone: '',
     whatsapp: '',
     instagram: '',
+    hidden_story: ''
   });
   const [hours, setHours] = useState(defaultHours);
   const [errors, setErrors] = useState({});
@@ -121,6 +122,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
         const cleanForm = {
           businessName: '',
           description: '',
+          success_story: '',
           cuisineType: 'Bajan',
           parish: 'st_michael',
           address: '',
@@ -141,6 +143,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     setForm({
       businessName: profile?.business_name ?? '',
       description: profile?.description ?? '',
+      success_story: profile.success_story ?? '',
       cuisineType: profile?.cuisine_type ?? 'Bajan',
       parish: profile?.parish ?? 'st_michael',
       address: profile?.address ?? '',
@@ -365,6 +368,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
   const handleNextStep = () => {
     const errs = validate();
     if (Object.keys(errs)?.length > 0) { setErrors(errs); return; }
+
     setDraftBusinessProfile({ form, hours });
     if (onNext) onNext();
   };
@@ -466,6 +470,20 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                   style={{ background: '#0F1A5C', border: errors?.description ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
                 />
                 {errors?.description && <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors?.description}</p>}
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
+                  Hidden story <span style={{ color: '#F87171' }}>*</span>
+                </label>
+                <textarea
+                  value={form?.success_story}
+                  onChange={e => handleChange('success_story', e?.target?.value)}
+                  placeholder="Tell us about your journey..."
+                  rows={4}
+                  className="w-full px-3 py-2 text-sm rounded-lg resize-none outline-none transition-all duration-250"
+                  style={{ background: '#0F1A5C', border: errors?.success_story ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                />
+                {errors?.success_story && <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors?.success_story}</p>}
               </div>
               <div>
                 <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>Cuisine / Food Type</label>
