@@ -6,6 +6,7 @@ export default function BusinessDropdown() {
   const {
     vendor_business,
     setIsCreatingBusiness,
+    setIsEditingBusiness,
     clearDrafts,
     selectedBusinessId,
     setSelectedBusinessId,
@@ -53,14 +54,24 @@ export default function BusinessDropdown() {
             Select a business to view its details or register a new one
           </p>
         </div>
-        <button
-          onClick={handleAddNewBusiness}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
-          style={{ background: '#C9A84C', color: '#0F1A5C' }}
-        >
-          <Icon name="Plus" size={16} color="#0F1A5C" />
-          Add New Business
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsEditingBusiness(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
+            style={{ background: 'rgba(201,168,76,0.1)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}
+          >
+            <Icon name="Edit" size={16} color="#C9A84C" />
+            Edit Profile
+          </button>
+          <button
+            onClick={handleAddNewBusiness}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
+            style={{ background: '#C9A84C', color: '#0F1A5C' }}
+          >
+            <Icon name="Plus" size={16} color="#0F1A5C" />
+            Add New Business
+          </button>
+        </div>
       </div>
 
       {/* Selector Dropdown */}
@@ -122,12 +133,22 @@ export default function BusinessDropdown() {
           {/* Details Content */}
           <div className="p-6 space-y-5">
             {/* Description */}
-            <div>
+            <div className="w-full">
               <span className="block text-xs font-bold text-[#9BA4E8] uppercase tracking-wider mb-1.5">About the Business</span>
-              <p className="text-sm text-gray-200 leading-relaxed p-4 rounded-lg" style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.15)' }}>
+              <div className="w-full block break-words text-sm text-gray-200 leading-relaxed p-4 rounded-lg" style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.15)' }}>
                 {selectedBusiness.description || 'No description provided.'}
-              </p>
+              </div>
             </div>
+
+            {/* Hidden Story */}
+            {selectedBusiness.success_story && (
+              <div className="w-full">
+                <span className="block text-xs font-bold text-[#9BA4E8] uppercase tracking-wider mb-1.5">Hidden Story</span>
+                <div className="w-full block break-words text-sm text-gray-200 leading-relaxed p-4 rounded-lg" style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.15)' }}>
+                  {selectedBusiness.success_story}
+                </div>
+              </div>
+            )}
 
             {/* Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

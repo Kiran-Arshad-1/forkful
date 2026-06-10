@@ -40,11 +40,13 @@ const useVendorProfileStore = create((set, get) => ({
   draftMenuItems: [],
   draftPhotos: [],
   isCreatingBusiness: false,
+  isEditingBusiness: false,
   selectedBusinessId: '',
   setDraftBusinessProfile: (data) => set({ draftBusinessProfile: data }),
   setDraftMenuItems: (items) => set({ draftMenuItems: items }),
   setDraftPhotos: (photos) => set({ draftPhotos: photos }),
   setIsCreatingBusiness: (val) => set({ isCreatingBusiness: val }),
+  setIsEditingBusiness: (val) => set({ isEditingBusiness: val }),
   setSelectedBusinessId: async (id) => {
     set({ selectedBusinessId: id });
     if (!id) return;
@@ -145,7 +147,6 @@ const useVendorProfileStore = create((set, get) => ({
       parish: form.parish,
       address: form.address,
       phone: form.phone,
-      opening_hours: buildOpeningHoursPayload(hours),
       status: 'pending',
       success_story: form.success_story,
 
@@ -177,6 +178,51 @@ const useVendorProfileStore = create((set, get) => ({
       });
     } catch (err) {
       set({ isSaving: false, error: err?.message ?? 'Failed to save profile' });
+      throw err;
+    }
+  },
+
+  updateBusinessProfile: async (businessId, form, hours) => {
+    const { profile, vendorId } = get();
+    ('Updating business profile for businessId:', businessId, 'with form data:', form, 'and hours:', hours);
+
+    if (!profile || !businessId) return;
+    set({ isSaving: true, error: null });
+
+    const lat = parseFloat(form.lat);
+    const lng = parseFloat(form.lng);
+
+    const businessUpdates = {
+      name: form.businessName,
+      description: form.description,
+      category: form.cuisineType,
+      parish: form.parish,
+      address: form.address,
+      phone: form.phone,
+      success_story: form.success_story,
+      ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
+    };
+
+    try {
+      const profileId = profile?.vendor_id;
+
+      await Promise.all([
+        svc.updateVendorBusiness(businessId, businessUpdates),
+      ]);
+
+      await svc.saveOpeningHours(businessId, hours);
+
+      const businessRes = await svc.vendorBusinesses(profileId);
+      const businesses = businessRes?.data ?? [];
+
+      set({
+        openingHours: hours,
+        vendor_business: businesses,
+        isSaving: false,
+        isEditingBusiness: false
+      });
+    } catch (err) {
+      set({ isSaving: false, error: err?.message ?? 'Failed to update profile' });
       throw err;
     }
   },

@@ -56,6 +56,22 @@ export async function insertVendorBusiness(ownerId, updates) {
   return data;
 }
 
+export async function updateVendorBusiness(businessId, updates) {
+  ('Updating business profile for businessId', businessId, 'with updates:', updates);
+  const { data, error } = await supabase
+    .from(BUSINESS_TABLE)
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', businessId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating business profile:', error);
+    throw error;
+  }
+  return data;
+}
+
 // ─── Opening Hours ────────────────────────────────────────────────────────────
 
 function rowsToMap(rows) {

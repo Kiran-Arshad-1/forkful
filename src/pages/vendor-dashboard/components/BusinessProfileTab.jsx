@@ -52,6 +52,10 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     setDraftBusinessProfile,
     isCreatingBusiness,
     setIsCreatingBusiness,
+    isEditingBusiness,
+    setIsEditingBusiness,
+    selectedBusinessId,
+    updateBusinessProfile,
   } = useVendorProfileStore();
 
 
@@ -139,6 +143,27 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
       setDataLoading(false);
       return;
     }
+    if (isEditingBusiness && selectedBusinessId) {
+      const b = vendor_business?.find(b => b.id === selectedBusinessId);
+      if (b) {
+        setForm({
+          businessName: b.name ?? '',
+          description: b.description ?? '',
+          success_story: b.success_story ?? '',
+          cuisineType: b.category ?? 'Bajan',
+          parish: b.parish ?? 'st_michael',
+          address: b.address ?? '',
+          lat: b.latitude != null ? String(b.latitude) : '',
+          lng: b.longitude != null ? String(b.longitude) : '',
+          phone: b.phone ?? profile?.phone ?? '',
+          whatsapp: profile?.whatsapp ?? '',
+          instagram: profile?.instagram ?? '',
+        });
+        setHours(savedHours);
+        setDataLoading(false);
+        return;
+      }
+    }
     if (!profile) return;
     setForm({
       businessName: profile?.business_name ?? '',
@@ -155,7 +180,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     });
     setHours(savedHours);
     setDataLoading(false);
-  }, [profile?.vendor_id, draftBusinessProfile, isOnboarding, savedHours]);
+  }, [profile?.vendor_id, draftBusinessProfile, isOnboarding, savedHours, isEditingBusiness, selectedBusinessId, vendor_business]);
 
   // Load Leaflet CSS + JS dynamically
   useEffect(() => {
@@ -380,7 +405,11 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     setSaveError('');
     try {
       ('sending the form to save', form, hours);
-      await saveBusinessProfile(form, hours);
+      if (isEditingBusiness && selectedBusinessId) {
+        await updateBusinessProfile(selectedBusinessId, form, hours);
+      } else {
+        await saveBusinessProfile(form, hours);
+      }
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
     } catch (err) {
@@ -394,7 +423,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
 
   return (
     <>
-      {!isCreatingBusiness ? (
+      {(!isCreatingBusiness && !isEditingBusiness) ? (
         hasBusiness ? (
           <BusinessDropdown />
         ) : (
@@ -717,6 +746,19 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                     <Icon name="CheckCircle" size={16} color="#10B981" />
                     Changes saved!
                   </span>
+                )}
+                {(isEditingBusiness || isCreatingBusiness) && hasBusiness && (
+                  <button
+                    disabled={saving}
+                    onClick={() => {
+                      setIsEditingBusiness(false);
+                      setIsCreatingBusiness(false);
+                    }}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-250 hover:bg-white/10 disabled:opacity-50"
+                    style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
+                  >
+                    Cancel
+                  </button>
                 )}
                 <button
                   disabled={saving}
