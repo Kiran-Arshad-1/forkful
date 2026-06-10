@@ -473,7 +473,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
-                  Hidden story <span style={{ color: '#F87171' }}>*</span>
+                  Hidden story
                 </label>
                 <textarea
                   value={form?.success_story}
