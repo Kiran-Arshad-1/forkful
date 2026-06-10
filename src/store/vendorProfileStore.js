@@ -347,7 +347,6 @@ const useVendorProfileStore = create((set, get) => ({
         };
       }));
 
-      (photos, '-------------------photos')
 
       set({ photos, isLoading: false });
 
