@@ -53,7 +53,7 @@ function Lightbox({ images, index, onClose }) {
     const prev = () => setCur(i => (i - 1 + images.length) % images.length);
     const next = () => setCur(i => (i + 1) % images.length);
     return (
-        <div className="fixed inset-0 z-[60] flex items-center h-30 w-30 justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center  bg-black/50 backdrop-blur-sm" onClick={onClose}>
             <button onClick={e => { e.stopPropagation(); prev(); }} className="absolute left-4 p-3 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors">
                 <ChevronLeft size={22} />
             </button>

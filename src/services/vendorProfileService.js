@@ -10,6 +10,7 @@ const BANNER_BUCKET = GALLERY_BUCKET;   // reuses gallery-photos bucket under _b
 const MENU_BUCKET = GALLERY_BUCKET;   // reuses gallery-photos bucket under _menu/ prefix
 const BUSINESS_BUCKET = 'vendor';
 const BUSINESS_PHOTO_PREFIX = 'business-photos';
+const PROFILE_PHOTOS_BUCKET = 'profile-photos';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -160,16 +161,28 @@ export async function deleteMenuItem(itemId) {
 
 export async function uploadBannerImage(vendorId, file) {
   const ext = file.name.split('.').pop() ?? 'jpg';
-  const path = `_banners/${vendorId}/banner.${ext}`;
+  const path = `${vendorId}/profile_photo.${ext}`;
 
   const { error } = await supabase.storage
-    .from(BANNER_BUCKET)
+    .from(PROFILE_PHOTOS_BUCKET)
     .upload(path, file, { upsert: true, contentType: file.type });
 
   if (error) throw error;
 
-  const { data } = supabase.storage.from(BANNER_BUCKET).getPublicUrl(path);
-  return data.publicUrl;
+
+  return { path: path };
+}
+
+export async function getProfilePhotoSignedUrl(path) {
+  const { data, error } = await supabase.storage
+    .from(PROFILE_PHOTOS_BUCKET)
+    .createSignedUrl(path, 3600);
+
+  if (error) {
+    console.error('Error creating signed url:', error);
+    return null;
+  }
+  return data.signedUrl;
 }
 
 export async function uploadMenuItemImage(menuItemId, file) {

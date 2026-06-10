@@ -391,7 +391,6 @@ const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
       {photos.length > 0 && !isOnboarding && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
           {photos.map((photo) => {
-            const statusCfg = STATUS_CONFIG[photo.status] ?? STATUS_CONFIG.pending;
             return (
 
               < div
@@ -407,18 +406,11 @@ const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
                   />
                 </div>
 
-                <div className="p-2 space-y-1.5">
+                <div className="p-2 flex justify-center py-3 space-y-1.5">
 
-                  <p className="text-xs font-medium truncate" style={{ color: '#FFFFFF' }}>
+                  <p className="text-sm font-medium truncate" style={{ color: '#FFFFFF' }}>
                     {photo.caption || '—'}
                   </p>
-                  <span
-                    className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full"
-                    style={{ background: statusCfg.bg, color: statusCfg.color }}
-                  >
-                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: statusCfg.color }} />
-                    {statusCfg.label}
-                  </span>
                 </div>
 
                 <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">

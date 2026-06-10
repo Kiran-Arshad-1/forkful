@@ -95,6 +95,12 @@ const useVendorProfileStore = create((set, get) => ({
       const profile = seedProfile ?? (await svc.fetchVendorProfile(userId));
       const profileId = profile?.vendor_id;
 
+      if (profile?.profile_img_path) {
+        const signedUrl = await svc.getProfilePhotoSignedUrl(profile.profile_img_path);
+        profile.profile_image_url = signedUrl;
+        profile.banner_image_url = signedUrl;
+      }
+
       const businessRes = await svc.vendorBusinesses(profileId);
       const businesses = businessRes?.data ?? [];
       const currentSelected = get().selectedBusinessId;
@@ -175,18 +181,16 @@ const useVendorProfileStore = create((set, get) => ({
   },
 
   // ── Granular updates (use when auto-saving individual sections) ─────────────
-  updateBasicInfo: async ({ businessName, description, cuisineType, parish, address }) => {
+  updateBasicInfo: async ({ full_name, address, contact_phone }) => {
     const { profile } = get();
     if (!profile) return;
     const profileId = profile?.vendor_id
     set({ isSaving: true, error: null });
     try {
       const updated = await svc.updateVendorProfile(profileId, {
-        business_name: businessName,
-        description,
-        cuisine_type: cuisineType,
-        parish,
+        full_name,
         address,
+        contact_phone
       });
       set({ profile: updated, isSaving: false });
     } catch (err) {
@@ -340,9 +344,9 @@ const useVendorProfileStore = create((set, get) => ({
           storage_path: storagePath,
           photo_url: photoUrl,
           caption: normalizePhotoCaption(fileName) || null,
-          status: 'pending',
         };
       }));
+
       (photos, '-------------------photos')
 
       set({ photos, isLoading: false });
@@ -368,6 +372,7 @@ const useVendorProfileStore = create((set, get) => ({
         status: 'pending',
       };
       set((s) => ({ photos: [newPhoto, ...s.photos], isSaving: false }));
+
       return newPhoto;
     } catch (err) {
       set({ isSaving: false, error: err?.message });
@@ -410,8 +415,15 @@ const useVendorProfileStore = create((set, get) => ({
     const profileId = profile?.vendor_id
     set({ isSaving: true, error: null });
     try {
-      const url = await svc.uploadBannerImage(profileId, file);
-      const updated = await svc.updateVendorProfile(profileId, { banner_image_url: url });
+      const { path } = await svc.uploadBannerImage(profileId, file);
+      console.log('and path', path);
+
+      const updated = await svc.updateVendorProfile(profileId, { profile_img_path: path });
+      if (updated?.profile_img_path) {
+        const signedUrl = await svc.getProfilePhotoSignedUrl(updated.profile_img_path);
+        updated.profile_image_url = signedUrl;
+        updated.banner_image_url = signedUrl;
+      }
       set({ profile: updated, isSaving: false });
     } catch (err) {
       set({ isSaving: false, error: err?.message });

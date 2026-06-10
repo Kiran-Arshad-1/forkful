@@ -36,7 +36,7 @@ const VendorDashboard = () => {
   const profile = storeProfile || authProfile;
   const vendorName = profile?.full_name || user?.email || 'Vendor';
   const vendorEmail = profile?.email || user?.email || '';
-  const approvalStatus = profile?.approval_status || 'pending';
+  const approvalStatus = profile?.approval_status;
   const isOnboarding = isCreatingBusiness; // Dynamic onboarding mode based on store state
   ('[Dashboard Mode]', { isOnboarding, vendor_business, approvalStatus });
   const profilePhoto = storeProfile?.banner_image_url || null;
@@ -50,11 +50,15 @@ const VendorDashboard = () => {
   const [editError, setEditError] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const photoInputRef = useRef(null);
+  const [editAddress, setEditAddress] = useState('');
+  const [editContactNumber, setEditContactNumber] = useState('');
 
   const openEditModal = () => {
     setEditName(storeProfile?.full_name || vendorName);
+    setEditAddress(storeProfile?.address || '');
+    setEditContactNumber(storeProfile?.phone_number || '');
     setPhotoFile(null);
-    setPhotoPreview(storeProfile?.banner_image_url || null);
+    setPhotoPreview(storeProfile?.profile_image_url || null);
     setEditError('');
     setShowUserMenu(false);
     setShowEditModal(true);
@@ -69,18 +73,26 @@ const VendorDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim()) { setEditError('Business name cannot be empty.'); return; }
-    setEditSaving(true);
+    if (!editName.trim() && !editContactNumber.trim() && !editAddress.trim()) {
+      setEditError('Please fill atleast one of the fields.');
+      return;
+    }
     setEditError('');
     try {
-      const nameChanged = editName.trim() !== (storeProfile?.business_name || '');
-      if (nameChanged) {
+      const nameChanged = editName.trim() !== (storeProfile?.full_name || '');
+      const addressChanged = editAddress.trim() !== (storeProfile?.address || '');
+      const contactPhoneChanged = editContactNumber.trim() !== (storeProfile?.contact_phone || '');
+      if (nameChanged || addressChanged || contactPhoneChanged) {
+        console.log({
+          full_name: editName.trim(),
+          address: editAddress,
+          contact_phone: editContactNumber,
+        });
+
         await updateBasicInfo({
-          businessName: editName.trim(),
-          description: storeProfile?.description || '',
-          cuisineType: storeProfile?.cuisine_type || '',
-          parish: storeProfile?.parish || '',
-          address: storeProfile?.address || '',
+          full_name: editName.trim(),
+          address: editAddress,
+          contact_phone: editContactNumber,
         });
       }
       if (photoFile) {
@@ -172,24 +184,6 @@ const VendorDashboard = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-2 md:gap-3">
-            {/* Approval badge */}
-            <div
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${approvalStatus === 'approved' ? 'border-emerald-500/30' : 'border-yellow-500/30'
-                }`}
-              style={{
-                background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-                color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
-              }}
-            >
-              <Icon
-                name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
-                size={12}
-                color={approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
-              />
-              {approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
-            </div>
-
-            {/* View Listing */}
             <button
               className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-all"
               style={{ borderColor: 'rgba(201,168,76,0.4)', color: '#C9A84C' }}
@@ -376,17 +370,55 @@ const VendorDashboard = () => {
                 />
               </div>
 
-              {/* Business Name */}
+              {/* Profile Name */}
               <div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
+                    Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Enter Name"
+                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                    style={{
+                      background: '#0F1A5C',
+                      border: '1px solid rgba(201,168,76,0.35)',
+                      color: '#FFFFFF',
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
+                    Address
+                  </label>
+                  <input
+                    type="text"
+                    value={editAddress}
+                    onChange={(e) => setEditAddress(e.target.value)}
+                    placeholder="Enter Address"
+                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                    style={{
+                      background: '#0F1A5C',
+                      border: '1px solid rgba(201,168,76,0.35)',
+                      color: '#FFFFFF',
+                    }}
+                    onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
+                    onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                  />
+                </div>
                 <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
-                  Name
+                  Contact Number
                 </label>
                 <input
-                  type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Enter business name"
-                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                  type="number"
+                  value={editContactNumber}
+                  onChange={(e) => setEditContactNumber(e.target.value)}
+                  placeholder="Enter contact number"
+                  className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
                   style={{
                     background: '#0F1A5C',
                     border: '1px solid rgba(201,168,76,0.35)',
