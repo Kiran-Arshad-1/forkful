@@ -41,6 +41,7 @@ export default function BusinessDropdown() {
   }
 
   const isApproved = selectedBusiness?.status === 'active';
+  const isBlocked = selectedBusiness?.status === 'blocked';
 
   return (
     <div className="w-full space-y-6">
@@ -117,16 +118,16 @@ export default function BusinessDropdown() {
             <div
               className="px-3.5 py-1 rounded-full border flex items-center gap-1.5 w-max text-xs font-semibold"
               style={{
-                background: isApproved ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-                borderColor: isApproved ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)',
-                color: isApproved ? '#10B981' : '#C9A84C'
+                background: isApproved ? 'rgba(16,185,129,0.1)' : isBlocked ? 'rgba(239, 68, 68, 0.1)' : 'rgba(201,168,76,0.1)',
+                borderColor: isApproved ? 'rgba(16,185,129,0.3)' : isBlocked ? 'rgba(239, 68, 68, 0.3)' : 'rgba(201,168,76,0.3)',
+                color: isApproved ? '#10B981' : isBlocked ? '#EF4444' : '#C9A84C'
               }}
             >
               <div
                 className="w-1.5 h-1.5 rounded-full"
-                style={{ background: isApproved ? '#10B981' : '#C9A84C' }}
+                style={{ background: isApproved ? '#10B981' : isBlocked ? '#EF4444' : '#C9A84C' }}
               />
-              {isApproved ? 'Approved & Live' : 'Pending Review'}
+              {isApproved ? 'Approved & Live' : isBlocked ? 'Blocked' : 'Pending Review'}
             </div>
           </div>
 
