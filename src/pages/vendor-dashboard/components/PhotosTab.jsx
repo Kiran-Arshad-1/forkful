@@ -264,18 +264,23 @@ const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
           </div>
         ) : activeQueue.length === 0 ? (
           <>
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}
-            >
-              <Icon name="ImagePlus" size={26} color="#C9A84C" />
+            <div className='flex justify-between items-center flex-col'>
+
+
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}
+              >
+                <Icon name="ImagePlus" size={26} color="#C9A84C" />
+              </div>
+              <p className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>
+                Drag &amp; drop photos here
+              </p>
+              <p className="text-xs" style={{ color: '#9BA4E8' }}>
+                or click to browse — JPG, PNG, WebP supported
+              </p>
             </div>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>
-              Drag &amp; drop photos here
-            </p>
-            <p className="text-xs" style={{ color: '#9BA4E8' }}>
-              or click to browse — JPG, PNG, WebP supported
-            </p>
+
           </>
         ) : null}
       </div>
