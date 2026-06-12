@@ -56,7 +56,7 @@ const VendorDashboard = () => {
   const openEditModal = () => {
     setEditName(storeProfile?.full_name || vendorName);
     setEditAddress(storeProfile?.address || '');
-    setEditContactNumber(storeProfile?.phone_number || '');
+    setEditContactNumber(storeProfile?.contact_phone || '');
     setPhotoFile(null);
     setPhotoPreview(storeProfile?.profile_image_url || null);
     setEditError('');
@@ -415,9 +415,15 @@ const VendorDashboard = () => {
                   Contact Number
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   value={editContactNumber}
-                  onChange={(e) => setEditContactNumber(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (/^\d*$/.test(val)) {
+                      setEditContactNumber(val);
+                    }
+                  }}
                   placeholder="Enter contact number"
                   className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
                   style={{
