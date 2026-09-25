@@ -15,6 +15,7 @@ import VendorTable from './components/VendorTable';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import AdminBusinessesList from './AdminBusinessesList';
 import BusinessDetailsModal from './components/BusinessDetailsModal';
+import ReviewsPanel from './components/ReviewsPanel';
 
 const mapProfile = (p) => ({
   id: p.id,
@@ -24,17 +25,17 @@ const mapProfile = (p) => ({
   email: p.email || '',
   phone: p.phone || p.contact_phone || '',
   whatsapp: p.whatsapp || '',
-  instagram: p.instagram || '',
+  gender: p.gender || '',
   cuisineType: p.cuisine_type || '',
   parish: p.parish || '',
   address: p.address || '',
   description: p.description || '',
   approvalStatus: p.approval_status,
-  subscriptionStatus: 'trial',
+  subscriptionStatus: p.subscription_tier || "",
   submittedDate: p.created_at
     ? new Date(p.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
     : '',
-  photo: p.banner_image_url || '',
+  photo: p.profile_img_url || '',
   photoAlt: p.business_name || '',
   is_listed: p.is_listed,
   lat: p.latitude ?? null,
@@ -48,6 +49,7 @@ const SECTIONS = [
   { id: 'vendors', label: 'All Vendors', shortLabel: 'Vendors', icon: 'Store' },
   { id: 'subscriptions', label: 'Subscriptions', shortLabel: 'Billing', icon: 'CreditCard' },
   { id: 'businesses', label: 'Businesses', shortLabel: 'Businesses', icon: 'Store' },
+  { id: 'reviews', label: 'Reviews', shortLabel: 'Reviews', icon: 'Star' },
 ];
 
 
@@ -70,13 +72,29 @@ const AdminDashboard = () => {
 
   const [businesses, setBusinesses] = useState([]);
   const [businessesLoading, setBusinessesLoading] = useState(true);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState('');
+  const [selectedReviewBusinessId, setSelectedReviewBusinessId] = useState('');
+  const [reviewsPage, setReviewsPage] = useState(1);
+  const [reviewsTotal, setReviewsTotal] = useState(0);
+  const [reviewRatingFilter, setReviewRatingFilter] = useState('all');
+  const [reviewSort, setReviewSort] = useState('newest');
+  const [reviewStats, setReviewStats] = useState({ total: 0, average: '0.0', fiveStar: 0, replied: 0 });
 
   const [pendingPhotosCount, setPendingPhotosCount] = useState(0);
 
   const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState(null);
   const [detailVendor, setDetailVendor] = useState(null);
+  const [highlightedBusinessId, setHighlightedBusinessId] = useState(null);
   const [toast, setToast] = useState(null);
+
+  const handleSelectBusinessFromVendorModal = (business) => {
+    setDetailVendor(null);
+    setHighlightedBusinessId(business?.id);
+    setActiveSection('businesses');
+  };
 
   const showToast = (msg) => {
     setToast(msg);
@@ -89,7 +107,11 @@ const AdminDashboard = () => {
       .from('vendor_profiles')
       .select('*')
       .order('created_at', { ascending: false });
+    console.log('raw data from api', data);
+
     if (!error && data) setVendors(data.map(mapProfile));
+    console.log('data after map', data.map(mapProfile));
+
     setVendorsLoading(false);
   }, []);
 
@@ -108,6 +130,112 @@ const AdminDashboard = () => {
     fetchBusinesses();
   }, [fetchBusinesses]);
 
+  const reviewsPageSize = 20;
+
+  const fetchReviews = useCallback(async () => {
+    if (!selectedReviewBusinessId) {
+      setReviews([]);
+      setReviewsTotal(0);
+      setReviewsLoading(false);
+      return;
+    }
+
+    setReviewsLoading(true);
+    setReviewsError('');
+
+    const ascending = reviewSort === 'oldest' || reviewSort === 'lowest';
+    const orderColumn = reviewSort === 'highest' || reviewSort === 'lowest' ? 'rating' : 'created_at';
+    const from = (reviewsPage - 1) * reviewsPageSize;
+    const to = from + reviewsPageSize - 1;
+
+    let query = supabase
+      .from('business_reviews')
+      .select(`
+        review_id,
+        user_id,
+        business_id,
+        user_name,
+        username,
+        rating,
+        comment,
+        created_at,
+        updated_at,
+        tags,
+        images_paths,
+        isFoodTrail,
+        owner_reply,
+        owner_reply_at,
+        helpful_count,
+        business:vendors_businesses!business_reviews_business_id_fkey(id, name, category, parish),
+        reviewer:users!business_reviews_user_id_fkey(uuid, name, username, profile_photo_url)
+      `, { count: 'exact' })
+      .eq('business_id', selectedReviewBusinessId);
+
+    if (reviewRatingFilter !== 'all') query = query.eq('rating', Number(reviewRatingFilter));
+
+    query = query.order(orderColumn, { ascending });
+    if (orderColumn === 'rating') query = query.order('created_at', { ascending: false });
+
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      setReviewsError(error.message || 'An unexpected error occurred.');
+    } else {
+      setReviews(data || []);
+      setReviewsTotal(count || 0);
+    }
+    setReviewsLoading(false);
+  }, [selectedReviewBusinessId, reviewRatingFilter, reviewSort, reviewsPage]);
+
+  const fetchReviewStats = useCallback(async () => {
+    if (!selectedReviewBusinessId) {
+      setReviewStats({ total: 0, average: '0.0', fiveStar: 0, replied: 0 });
+      return;
+    }
+
+    const ratingRequests = [1, 2, 3, 4, 5].map((rating) => supabase
+      .from('business_reviews')
+      .select('review_id', { count: 'exact', head: true })
+      .eq('business_id', selectedReviewBusinessId)
+      .eq('rating', rating));
+
+    const ratingResults = await Promise.all(ratingRequests);
+    const replyResult = await supabase
+      .from('business_reviews')
+      .select('review_id', { count: 'exact', head: true })
+      .eq('business_id', selectedReviewBusinessId)
+      .not('owner_reply', 'is', null);
+
+    const counts = ratingResults.map((result) => result.count || 0);
+    const total = counts.reduce((sum, count) => sum + count, 0);
+    const weightedTotal = counts.reduce((sum, count, index) => sum + count * (index + 1), 0);
+
+    setReviewStats({
+      total,
+      average: total ? (weightedTotal / total).toFixed(1) : '0.0',
+      fiveStar: counts[4] || 0,
+      replied: replyResult.count || 0,
+    });
+  }, [selectedReviewBusinessId]);
+
+  useEffect(() => {
+    if (activeSection === 'reviews' && selectedReviewBusinessId) fetchReviews();
+  }, [activeSection, fetchReviews]);
+
+  useEffect(() => {
+    if (activeSection === 'reviews' && selectedReviewBusinessId) fetchReviewStats();
+  }, [activeSection, fetchReviewStats, selectedReviewBusinessId]);
+
+  const handleReviewBusinessChange = (businessId) => {
+    setSelectedReviewBusinessId(businessId);
+    setReviewsPage(1);
+    setReviewRatingFilter('all');
+    setReviewSort('newest');
+    setReviews([]);
+    setReviewsTotal(0);
+    setReviewStats({ total: 0, average: '0.0', fiveStar: 0, replied: 0 });
+  };
+
   const handleViewDetail = (business) => {
     setSelectedBusiness(business);
     setIsBusinessModalOpen(true);
@@ -115,9 +243,17 @@ const AdminDashboard = () => {
 
   // Filtered vendors based on section
   const baseVendors = useMemo(() => {
-    if (activeSection === 'approvals') return vendors?.filter((v) => v?.approvalStatus === 'pending');
-    return vendors;
-  }, [vendors, activeSection]);
+    const mapped = vendors?.map((v) => {
+      const vBusinesses = businesses?.filter((b) => b.owner_id === v.vendor_id) || [];
+      return {
+        ...v,
+        businesses: vBusinesses,
+        totalBusinesses: vBusinesses.length,
+      };
+    });
+    if (activeSection === 'approvals') return mapped?.filter((v) => v?.approvalStatus === 'pending');
+    return mapped;
+  }, [vendors, businesses, activeSection]);
 
   const filteredVendors = useMemo(() => {
     return baseVendors?.filter((v) => {
@@ -169,7 +305,7 @@ const AdminDashboard = () => {
 
     if (error) { showToast(`Error: ${error.message}`); return; }
 
-    setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, status: 'vendor_rejected' } : b));
+    setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, status: 'blocked' } : b));
     setIsBusinessModalOpen(false);
     showToast(`${business?.name || 'Business'} rejected.`);
 
@@ -254,6 +390,7 @@ const AdminDashboard = () => {
                 {activeSection === 'vendors' && 'All Vendors'}
                 {activeSection === 'subscriptions' && 'Subscription Management'}
                 {activeSection === 'businesses' && 'Businesses'}
+                {activeSection === 'reviews' && 'Business Reviews'}
               </h1>
               <p className="text-sm font-body mt-0.5" style={{ color: '#9BA4E8' }}>
                 {new Date()?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -412,6 +549,26 @@ const AdminDashboard = () => {
             </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
+            {activeSection === 'reviews' && (
+              <ReviewsPanel
+                businesses={businesses}
+                selectedBusinessId={selectedReviewBusinessId}
+                onBusinessChange={handleReviewBusinessChange}
+                reviews={reviews}
+                loading={reviewsLoading}
+                error={reviewsError}
+                onRetry={fetchReviews}
+                stats={reviewStats}
+                page={reviewsPage}
+                pageSize={reviewsPageSize}
+                total={reviewsTotal}
+                onPageChange={setReviewsPage}
+                ratingFilter={reviewRatingFilter}
+                onRatingFilterChange={(value) => { setReviewRatingFilter(value); setReviewsPage(1); }}
+                sortBy={reviewSort}
+                onSortChange={(value) => { setReviewSort(value); setReviewsPage(1); }}
+              />
+            )}
             {
               activeSection === 'businesses' && businessesLoading ? (
                 <div className="flex items-center justify-center py-16">
@@ -432,6 +589,7 @@ const AdminDashboard = () => {
                   handleBusinessApprove={handleBusinessApprove}
                   vendors={vendors}
                   handleViewDetail={handleViewDetail}
+                  highlightedBusinessId={highlightedBusinessId}
                 />
               ) : null}
           </div>
@@ -547,6 +705,26 @@ const AdminDashboard = () => {
             </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
+            {activeSection === 'reviews' && (
+              <ReviewsPanel
+                businesses={businesses}
+                selectedBusinessId={selectedReviewBusinessId}
+                onBusinessChange={handleReviewBusinessChange}
+                reviews={reviews}
+                loading={reviewsLoading}
+                error={reviewsError}
+                onRetry={fetchReviews}
+                stats={reviewStats}
+                page={reviewsPage}
+                pageSize={reviewsPageSize}
+                total={reviewsTotal}
+                onPageChange={setReviewsPage}
+                ratingFilter={reviewRatingFilter}
+                onRatingFilterChange={(value) => { setReviewRatingFilter(value); setReviewsPage(1); }}
+                sortBy={reviewSort}
+                onSortChange={(value) => { setReviewSort(value); setReviewsPage(1); }}
+              />
+            )}
           </div>
 
           {activeSection === 'businesses' && <AdminBusinessesList
@@ -561,6 +739,7 @@ const AdminDashboard = () => {
             vendors={vendors}
             handleBusinessApprove={handleBusinessApprove}
             handleViewDetail={handleViewDetail}
+            highlightedBusinessId={highlightedBusinessId}
           />}
         </div>
       </main>
@@ -577,6 +756,7 @@ const AdminDashboard = () => {
       <VendorDetailModal
         vendor={detailVendor}
         onClose={() => setDetailVendor(null)}
+        onSelectBusiness={handleSelectBusinessFromVendorModal}
         onToggleStatus={(id, currentlyActive) => { handleToggleVendorStatus(id, currentlyActive); }} />
 
       {/* Toast */}

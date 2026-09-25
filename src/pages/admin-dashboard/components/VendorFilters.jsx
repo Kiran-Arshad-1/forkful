@@ -17,14 +17,7 @@ const subscriptionOptions = [
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
-const categoryOptions = [
-  { value: 'all', label: 'All Categories' },
-  { value: 'Restaurant', label: 'Restaurant' },
-  { value: 'Food Truck', label: 'Food Truck' },
-  { value: 'Bakery', label: 'Bakery' },
-  { value: 'Cafe', label: 'Cafe' },
-  { value: 'Street Food', label: 'Street Food' },
-];
+
 
 
 
@@ -46,9 +39,7 @@ const VendorFilters = ({ search, onSearch, approvalFilter, onApprovalFilter, sub
         <div className="w-40">
           <Select options={subscriptionOptions} value={subscriptionFilter} onChange={onSubscriptionFilter} placeholder="Subscription" />
         </div>
-        <div className="w-40">
-          <Select options={categoryOptions} value={categoryFilter} onChange={onCategoryFilter} placeholder="Category" />
-        </div>
+
         <Button variant="ghost" size="sm" iconName="X" iconPosition="left" onClick={onClearFilters}>Clear</Button>
       </div>
     </div>

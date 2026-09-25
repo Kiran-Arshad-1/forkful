@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { Search, ChevronDown, X, Eye, Check, Image as ImageIcon } from 'lucide-react';
+import { Eye, Check, Image as ImageIcon } from 'lucide-react';
 import Select from 'components/ui/Select';
 import Input from 'components/ui/Input';
 import Button from 'components/ui/Button';
-// Mock Data
 
 const approvalOptions = [
     { value: 'all', label: 'All Statuses' },
@@ -15,11 +14,23 @@ const approvalOptions = [
 
 const categoryOptions = [
     { value: 'all', label: 'All Categories' },
-    { value: 'Restaurant', label: 'Restaurant' },
-    { value: 'Food Truck', label: 'Food Truck' },
+    { value: 'Bajan', label: 'Bajan' },
+    { value: 'Caribbean', label: 'Caribbean' },
+    { value: 'Seafood', label: 'Seafood' },
+    { value: 'American', label: 'American' },
+    { value: 'Chinese', label: 'Chinese' },
+    { value: 'Indian', label: 'Indian' },
+    { value: 'Italian', label: 'Italian' },
+    { value: 'Mexican', label: 'Mexican' },
+    { value: 'Japanese', label: 'Japanese' },
+    { value: 'Thai', label: 'Thai' },
+    { value: 'Mediterranean', label: 'Mediterranean' },
+    { value: 'Fast Food', label: 'Fast Food' },
+    { value: 'Vegetarian', label: 'Vegetarian' },
+    { value: 'Vegan', label: 'Vegan' },
     { value: 'Bakery', label: 'Bakery' },
-    { value: 'Cafe', label: 'Cafe' },
-    { value: 'Street Food', label: 'Street Food' },
+    { value: 'Desserts', label: 'Desserts' },
+    { value: 'Other', label: 'Other' },
 ];
 
 const statusColors = {
@@ -40,8 +51,21 @@ export default function AdminBusinessesList({
     vendors,
     handleBusinessApprove,
     handleViewDetail,
+    highlightedBusinessId,
 }) {
     const [selectedIds, setSelectedIds] = useState([]);
+
+    React.useEffect(() => {
+        if (highlightedBusinessId) {
+            const timer = setTimeout(() => {
+                const el = document.getElementById(`business-row-${highlightedBusinessId}`);
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [highlightedBusinessId]);
 
     const filteredBusinesses = React.useMemo(() => {
         return businesses?.filter((b) => {
@@ -133,74 +157,87 @@ export default function AdminBusinessesList({
 
                         {/* Table Body */}
                         <tbody className="divide-y divide-[#2A377D]">
-                            {filteredBusinesses?.map((business) => (
-                                <tr key={business.id} className="hover:bg-[#1D2B78] transition-colors group">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center justify-center">
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedIds.includes(business.id)}
-                                                onChange={() => toggleSelect(business.id)}
-                                                className="w-4 h-4 rounded border-[#2A377D] bg-[#111A50] cursor-pointer accent-[#C9A84C]"
-                                            />
-                                        </div>
-                                    </td>
-
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-full bg-[#111A50] border border-[#2A377D] flex items-center justify-center flex-shrink-0 text-[#6B76B8]">
-                                                <ImageIcon size={14} />
+                            {filteredBusinesses?.map((business) => {
+                                const isHighlighted = business.id === highlightedBusinessId;
+                                return (
+                                    <tr
+                                        key={business.id}
+                                        id={`business-row-${business.id}`}
+                                        className={`transition-colors group ${isHighlighted
+                                            ? 'bg-[#2A3B95] border-l-4 border-l-[#C9A84C] ring-1 ring-[#C9A84C]/50'
+                                            : 'hover:bg-[#1D2B78]'
+                                            }`}
+                                    >
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center justify-center">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={selectedIds.includes(business.id)}
+                                                    onChange={() => toggleSelect(business.id)}
+                                                    className="w-4 h-4 rounded border-[#2A377D] bg-[#111A50] cursor-pointer accent-[#C9A84C]"
+                                                />
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-semibold text-white">{business.name}</span>
-                                                <span className="text-xs text-[#9BA4E8] mt-0.5">{business.parish}</span>
+                                        </td>
+
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-[#111A50] border border-[#2A377D] flex items-center justify-center flex-shrink-0 text-[#6B76B8]">
+                                                    <ImageIcon size={14} />
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-semibold text-white flex items-center gap-2">
+                                                        {business.name}
+
+                                                    </span>
+                                                    <span className="text-xs text-[#9BA4E8] mt-0.5">{business.parish}</span>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
+                                        </td>
 
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm text-[#9BA4E8]">
-                                            {business.vendorEmail || vendors?.find(v => v.vendor_id === business.owner_id)?.email || '—'}
-                                        </span>
-                                    </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm text-[#9BA4E8]">
+                                                {business.vendorEmail || vendors?.find(v => v.vendor_id === business.owner_id)?.email || '—'}
+                                            </span>
+                                        </td>
 
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm text-[#9BA4E8]">{business.category || '—'}</span>
-                                    </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm text-[#9BA4E8]">{business.category || '—'}</span>
+                                        </td>
 
-                                    <td className="px-6 py-4">
-                                        <span className="text-sm text-[#9BA4E8]">
-                                            {business.submitted || (business.created_at
-                                                ? new Date(business.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                                                : '—')}
-                                        </span>
-                                    </td>
+                                        <td className="px-6 py-4">
+                                            <span className="text-sm text-[#9BA4E8]">
+                                                {business.submitted || (business.created_at
+                                                    ? new Date(business.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                                                    : '—')}
+                                            </span>
+                                        </td>
 
-                                    <td className="px-6 py-4">
-                                        <div
-                                            className={`inline-flex     items-center justify-center px-3 py-1 rounded-full text-xs font-bold border ${statusColors[business.status]}`}
-                                        >
-                                            {business.status ? (business.status.charAt(0).toUpperCase() + business.status.slice(1).toLowerCase()) : 'Pending'}
-                                        </div>
-                                    </td>
+                                        <td className="px-6 py-4">
+                                            <div
+                                                className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold border ${statusColors[business.status]}`}
+                                            >
+                                                {business.status ? (business.status.charAt(0).toUpperCase() + business.status.slice(1).toLowerCase()) : 'Pending'}
+                                            </div>
+                                        </td>
 
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-4">
-                                            <button onClick={() => handleViewDetail(business)} className="flex items-center gap-2 text-sm text-[#9BA4E8] hover:text-white transition-colors">
-                                                <Eye size={16} />
-                                                View
-                                            </button>
-
-                                            {business.status?.toLowerCase() === 'pending' && (
-                                                <button onClick={() => handleBusinessApprove(business.id)} className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#10B981] hover:bg-[#059669] text-white text-sm font-bold transition-colors">
-                                                    <Check size={14} strokeWidth={3} />
-                                                    Approve
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex items-center justify-end gap-4">
+                                                <button onClick={() => handleViewDetail(business)} className="flex items-center gap-2 text-sm text-[#9BA4E8] hover:text-white transition-colors">
+                                                    <Eye size={16} />
+                                                    View
                                                 </button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+
+                                                {business.status?.toLowerCase() === 'pending' && (
+                                                    <button onClick={() => handleBusinessApprove(business.id)} className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#10B981] hover:bg-[#059669] text-white text-sm font-bold transition-colors">
+                                                        <Check size={14} strokeWidth={3} />
+                                                        Approve
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
 
                     </table>

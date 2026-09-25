@@ -68,7 +68,7 @@ const VendorTable = ({ vendors, selectedIds, onToggleSelect, onToggleSelectAll, 
                   aria-label="Select all vendors"
                 />
               </th>
-              {['Vendor', 'Category', 'Submitted', 'Status', 'Subscription', 'Actions'].map(h => (
+              {['Vendor', 'Total Businesses', 'Submitted', 'Status', 'Subscription', 'Actions'].map(h => (
                 <th key={h} className="px-4 py-3 text-left font-semibold font-caption uppercase tracking-wide text-xs" style={{ color: '#9BA4E8' }}>{h}</th>
               ))}
             </tr>
@@ -114,7 +114,7 @@ const VendorTable = ({ vendors, selectedIds, onToggleSelect, onToggleSelectAll, 
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 font-body" style={{ color: '#9BA4E8' }}>{vendor?.cuisineType}</td>
+                    <td className="px-4 py-3 font-body" style={{ color: '#9BA4E8' }}>{vendor?.business_count || 0}</td>
                     <td className="px-4 py-3 font-data text-xs" style={{ color: '#9BA4E8' }}>{vendor?.submittedDate}</td>
                     <td className="px-4 py-3">
                       <StatusToggle
