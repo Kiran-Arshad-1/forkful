@@ -260,7 +260,7 @@ export async function fetchVendorReviews(vendorId) {
     .from('vendor_reviews')
     .select(`
       id,
-      rating,
+      rating, 
       review_text,
       tags,
       created_at,

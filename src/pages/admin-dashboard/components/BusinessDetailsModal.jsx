@@ -15,12 +15,18 @@ const TABS = [
 
 const statusStyle = {
     active: 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]',
+    approved: 'bg-[#10B981]/10 border-[#10B981]/30 text-[#10B981]',
     rejected: 'bg-red-500/10 border-red-500/30 text-red-400',
+    blocked: 'bg-red-500/10 border-red-500/30 text-red-400',
+    vendor_rejected: 'bg-red-500/10 border-red-500/30 text-red-400',
     pending: 'bg-[#C9A84C]/10 border-[#C9A84C]/30 text-[#C9A84C]',
 };
 const dotStyle = {
     active: 'bg-[#10B981]',
+    approved: 'bg-[#10B981]',
     rejected: 'bg-red-400',
+    blocked: 'bg-red-400',
+    vendor_rejected: 'bg-red-400',
     pending: 'bg-[#C9A84C] animate-pulse',
 };
 
@@ -316,6 +322,8 @@ export default function BusinessDetailsModal({ isOpen, onClose, business, onAppr
 
     const status = business.status?.toLowerCase() || 'pending';
     const isPending = status === 'pending';
+    const isBlocked = status === 'blocked' || status === 'rejected' || status === 'vendor_rejected';
+    const isActive = status === 'active' || status === 'approved';
     const photos = Array.isArray(business.business_images_urls) ? business.business_images_urls : [];
 
     const handleApprove = async () => {
@@ -457,22 +465,22 @@ export default function BusinessDetailsModal({ isOpen, onClose, business, onAppr
                                 <button onClick={onClose} className="px-5 py-2 rounded-lg text-sm font-bold text-white bg-[#2A377D] hover:bg-[#344491] transition-colors">
                                     Close
                                 </button>
-                                {isPending && (
-                                    <>
-                                        <button
-                                            onClick={() => setShowRejectForm(true)}
-                                            className="px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-red-300 transition-all"
-                                        >
-                                            <XCircle size={15} /> Reject
-                                        </button>
-                                        <button
-                                            onClick={handleApprove}
-                                            disabled={loading}
-                                            className="px-5 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] shadow-lg shadow-[#10B981]/20 transition-all disabled:opacity-60"
-                                        >
-                                            <Check size={15} /> Approve Business
-                                        </button>
-                                    </>
+                                {(isPending || isActive) && (
+                                    <button
+                                        onClick={() => setShowRejectForm(true)}
+                                        className="px-5 py-2 rounded-lg text-sm font-bold flex items-center gap-2 bg-red-900/40 hover:bg-red-800/60 border border-red-500/40 text-red-300 transition-all"
+                                    >
+                                        <XCircle size={15} /> {isActive ? 'Block Business' : 'Reject'}
+                                    </button>
+                                )}
+                                {(isPending || isBlocked || !isActive) && (
+                                    <button
+                                        onClick={handleApprove}
+                                        disabled={loading}
+                                        className="px-5 py-2 rounded-lg text-sm font-bold text-white flex items-center gap-2 bg-gradient-to-r from-[#10B981] to-[#059669] hover:from-[#059669] hover:to-[#047857] shadow-lg shadow-[#10B981]/20 transition-all disabled:opacity-60"
+                                    >
+                                        <Check size={15} /> Approve Business
+                                    </button>
                                 )}
                             </>
                         )}

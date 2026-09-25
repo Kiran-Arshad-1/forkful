@@ -10,7 +10,7 @@ const NAV_SECTIONS = [
   { id: 'vendors', label: 'All Vendors', icon: 'Store', path: '/admin-dashboard?section=vendors', badge: null },
   { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', path: '/admin-dashboard?section=subscriptions', badge: null },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart2', path: '/admin-dashboard?section=analytics', badge: null },
-  { id: 'reviews', label: 'Reviews', icon: 'Star', path: '/admin-dashboard?section=reviews', badge: 2 },
+  { id: 'reviews', label: 'Reviews', icon: 'Star', path: '/admin-dashboard?section=reviews', badge: null },
 ];
 
 const BOTTOM_NAV = [

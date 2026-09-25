@@ -1,18 +1,22 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Icon from 'components/AppIcon';
 import Image from 'components/AppImage';
 import StatusBadge from './StatusBadge';
+import { vendorBusinesses } from '../../../services/vendorProfileService';
 
-const Field = ({ label, value }) => (
-  <div>
-    <p className="text-xs font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'rgba(155,164,232,0.6)' }}>
-      {label}
-    </p>
-    <p className="text-sm" style={{ color: value ? '#FFFFFF' : '#9BA4E8' }}>
-      {value || '—'}
-    </p>
-  </div>
-);
+const Field = ({ label, value }) => {
+  const isPresent = value !== undefined && value !== null && value !== '';
+  return (
+    <div>
+      <p className="text-xs font-semibold uppercase tracking-wide mb-0.5" style={{ color: 'rgba(155,164,232,0.6)' }}>
+        {label}
+      </p>
+      <p className="text-sm" style={{ color: isPresent ? '#FFFFFF' : '#9BA4E8' }}>
+        {isPresent ? value : '—'}
+      </p>
+    </div>
+  );
+};
 
 const ActionButton = ({ onClick, icon, label, bg, color }) => (
   <button
@@ -25,13 +29,37 @@ const ActionButton = ({ onClick, icon, label, bg, color }) => (
   </button>
 );
 
-const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
+const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable, onSelectBusiness }) => {
   if (!vendor) return null;
+  console.log(vendor);
 
-  const hasLocation = vendor?.lat != null && vendor?.lng != null;
-  const osmSrc = hasLocation
-    ? `https://www.openstreetmap.org/export/embed.html?bbox=${vendor.lng - 0.012},${vendor.lat - 0.012},${vendor.lng + 0.012},${vendor.lat + 0.012}&layer=mapnik&marker=${vendor.lat},${vendor.lng}`
-    : null;
+  const [businesses, setBusinesses] = useState(vendor?.businesses || []);
+  const [loadingBusinesses, setLoadingBusinesses] = useState(false);
+
+  useEffect(() => {
+    const ownerId = vendor?.vendor_id || vendor?.id;
+    if (!ownerId) return;
+
+    let isMounted = true;
+    setLoadingBusinesses(true);
+    vendorBusinesses(ownerId)
+      .then((res) => {
+        if (isMounted) {
+          setBusinesses(res?.data ?? []);
+          setLoadingBusinesses(false);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to fetch vendor businesses:', err);
+        if (isMounted) setLoadingBusinesses(false);
+      });
+
+    return () => { isMounted = false; };
+  }, [vendor]);
+
+  const totalBusinessesCount = loadingBusinesses
+    ? (vendor?.businesses?.length ?? vendor?.totalBusinesses ?? '...')
+    : (businesses?.length ?? vendor?.businesses?.length ?? vendor?.totalBusinesses ?? 0);
 
   return (
     <div
@@ -85,6 +113,7 @@ const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
               <div className="flex flex-wrap items-center gap-1.5 mb-1">
                 <StatusBadge status={vendor?.approvalStatus} />
                 <StatusBadge status={vendor?.subscriptionStatus} />
+
               </div>
               {(vendor?.cuisineType || vendor?.parish) && (
                 <p className="text-xs" style={{ color: '#9BA4E8' }}>
@@ -103,7 +132,7 @@ const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
             <Field label="Owner" value={vendor?.ownerName} />
             <Field label="Phone" value={vendor?.phone} />
             <Field label="WhatsApp" value={vendor?.whatsapp} />
-            <Field label="Instagram" value={vendor?.instagram ? `@${vendor.instagram.replace(/^@/, '')}` : ''} />
+            <Field label="Gender" value={vendor?.gender} />
             <Field label="Address" value={vendor?.address} />
             <Field label="Submitted" value={vendor?.submittedDate} />
           </div>
@@ -118,33 +147,64 @@ const VendorDetailModal = ({ vendor, onClose, onApprove, onDisable }) => {
             </div>
           ) : null}
 
-          {/* Map */}
+          {/* Businesses */}
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: 'rgba(155,164,232,0.6)' }}>
-              Location
-            </p>
-            <div
-              className="w-full h-52 rounded-xl overflow-hidden"
-              style={{ border: '1px solid rgba(201,168,76,0.2)', background: 'rgba(15,26,92,0.5)' }}
-            >
-              {osmSrc ? (
-                <iframe
-                  width="100%"
-                  height="100%"
-                  loading="lazy"
-                  title={`${vendor?.businessName} location`}
-                  src={osmSrc}
-                  style={{ border: 'none', display: 'block' }}
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-2">
-                  <Icon name="MapPin" size={24} color="#9BA4E8" />
-                  <p className="text-sm" style={{ color: '#9BA4E8' }}>
-                    {vendor?.address || 'No location set'}
-                  </p>
-                </div>
-              )}
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: 'rgba(155,164,232,0.6)' }}>
+                Businesses ({totalBusinessesCount})
+              </p>
             </div>
+
+            {loadingBusinesses ? (
+              <div className="flex items-center justify-center p-6 rounded-xl" style={{ background: 'rgba(15,26,92,0.5)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                <div className="w-5 h-5 rounded-full border-2 animate-spin" style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
+              </div>
+            ) : businesses?.length > 0 ? (
+              <div className="flex flex-col gap-2">
+                {businesses.map((biz) => (
+                  <div
+                    key={biz.id}
+                    onClick={() => {
+                      if (onSelectBusiness) {
+                        onSelectBusiness(biz);
+                      }
+                      onClose();
+                    }}
+                    className="flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all hover:scale-[1.01]"
+                    style={{
+                      background: 'rgba(15,26,92,0.6)',
+                      border: '1px solid rgba(201,168,76,0.25)',
+                    }}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)' }}>
+                        <Icon name="Store" size={18} color="#C9A84C" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold truncate hover:underline" style={{ color: '#FFFFFF' }}>
+                          {biz.name}
+                        </p>
+                        <p className="text-xs truncate" style={{ color: '#9BA4E8' }}>
+                          {[biz.category, biz.parish].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: 'rgba(201,168,76,0.15)', color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}>
+                        View Details &rarr;
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-6 rounded-xl gap-1" style={{ background: 'rgba(15,26,92,0.5)', border: '1px solid rgba(201,168,76,0.15)' }}>
+                <Icon name="Store" size={20} color="#9BA4E8" />
+                <p className="text-xs" style={{ color: '#9BA4E8' }}>
+                  No businesses found for this vendor.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
