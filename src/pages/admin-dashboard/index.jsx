@@ -16,6 +16,12 @@ import SubscriptionPanel from './components/SubscriptionPanel';
 import AdminBusinessesList from './AdminBusinessesList';
 import BusinessDetailsModal from './components/BusinessDetailsModal';
 import ReviewsPanel from './components/ReviewsPanel';
+import TrailsPanel from './components/TrailsPanel';
+import {
+  fetchTrails as fetchTrailsData,
+  saveTrail,
+  setTrailPublished,
+} from '../../services/trailService';
 
 const mapProfile = (p) => ({
   id: p.id,
@@ -50,6 +56,7 @@ const SECTIONS = [
   { id: 'subscriptions', label: 'Subscriptions', shortLabel: 'Billing', icon: 'CreditCard' },
   { id: 'businesses', label: 'Businesses', shortLabel: 'Businesses', icon: 'Store' },
   { id: 'reviews', label: 'Reviews', shortLabel: 'Reviews', icon: 'Star' },
+  { id: 'trails', label: 'Food Trails', shortLabel: 'Trails', icon: 'Map' },
 ];
 
 
@@ -81,6 +88,9 @@ const AdminDashboard = () => {
   const [reviewRatingFilter, setReviewRatingFilter] = useState('all');
   const [reviewSort, setReviewSort] = useState('newest');
   const [reviewStats, setReviewStats] = useState({ total: 0, average: '0.0', fiveStar: 0, replied: 0 });
+  const [trails, setTrails] = useState([]);
+  const [trailsLoading, setTrailsLoading] = useState(false);
+  const [trailsError, setTrailsError] = useState('');
 
   const [pendingPhotosCount, setPendingPhotosCount] = useState(0);
 
@@ -129,6 +139,36 @@ const AdminDashboard = () => {
   useEffect(() => {
     fetchBusinesses();
   }, [fetchBusinesses]);
+
+  const fetchTrails = useCallback(async () => {
+    setTrailsLoading(true);
+    setTrailsError('');
+    try {
+      setTrails(await fetchTrailsData());
+    } catch (error) {
+      setTrailsError(error.message || 'An unexpected error occurred.');
+    } finally {
+      setTrailsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeSection === 'trails') fetchTrails();
+  }, [activeSection, fetchTrails]);
+
+  const handleSaveTrail = async (trail) => {
+    const trailId = await saveTrail(trail);
+    await fetchTrails();
+    showToast(`${trail.name} ${trail.id ? 'updated' : 'created'} successfully.`);
+    return trailId;
+  };
+
+  const handleSetTrailStatus = async (trail, status) => {
+    if (status === 'published' && !trail.stops?.length) throw new Error('Add at least one stop before publishing.');
+    await setTrailPublished(trail.id, status === 'published');
+    await fetchTrails();
+    showToast(`${trail.name} is now ${status}.`);
+  };
 
   const reviewsPageSize = 20;
 
@@ -391,6 +431,7 @@ const AdminDashboard = () => {
                 {activeSection === 'subscriptions' && 'Subscription Management'}
                 {activeSection === 'businesses' && 'Businesses'}
                 {activeSection === 'reviews' && 'Business Reviews'}
+                {activeSection === 'trails' && 'Food Trails'}
               </h1>
               <p className="text-sm font-body mt-0.5" style={{ color: '#9BA4E8' }}>
                 {new Date()?.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -569,6 +610,17 @@ const AdminDashboard = () => {
                 onSortChange={(value) => { setReviewSort(value); setReviewsPage(1); }}
               />
             )}
+            {activeSection === 'trails' && (
+              <TrailsPanel
+                trails={trails}
+                businesses={businesses}
+                loading={trailsLoading}
+                error={trailsError}
+                onRetry={fetchTrails}
+                onSaveTrail={handleSaveTrail}
+                onSetTrailStatus={handleSetTrailStatus}
+              />
+            )}
             {
               activeSection === 'businesses' && businessesLoading ? (
                 <div className="flex items-center justify-center py-16">
@@ -723,6 +775,17 @@ const AdminDashboard = () => {
                 onRatingFilterChange={(value) => { setReviewRatingFilter(value); setReviewsPage(1); }}
                 sortBy={reviewSort}
                 onSortChange={(value) => { setReviewSort(value); setReviewsPage(1); }}
+              />
+            )}
+            {activeSection === 'trails' && (
+              <TrailsPanel
+                trails={trails}
+                businesses={businesses}
+                loading={trailsLoading}
+                error={trailsError}
+                onRetry={fetchTrails}
+                onSaveTrail={handleSaveTrail}
+                onSetTrailStatus={handleSetTrailStatus}
               />
             )}
           </div>

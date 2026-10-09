@@ -11,6 +11,7 @@ const NAV_SECTIONS = [
   { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', path: '/admin-dashboard?section=subscriptions', badge: null },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart2', path: '/admin-dashboard?section=analytics', badge: null },
   { id: 'reviews', label: 'Reviews', icon: 'Star', path: '/admin-dashboard?section=reviews', badge: null },
+  { id: 'trails', label: 'Food Trails', icon: 'Map', path: '/admin-dashboard?section=trails', badge: null },
 ];
 
 const BOTTOM_NAV = [
