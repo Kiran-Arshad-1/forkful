@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from 'components/AppIcon';
 import Input from 'components/ui/Input';
 import Select from 'components/ui/Select';
 import Button from 'components/ui/Button';
 import TrailTable from './TrailTable';
 import TrailEditorModal from './TrailEditorModal';
+import TrailDetailsModal from './TrailDetailsModal';
 import {
   DURATION_OPTIONS,
   FILTER_DURATION_OPTIONS,
@@ -22,6 +23,7 @@ const TrailsPanel = ({
   loading = false,
   error = '',
   onRetry,
+  onFetchTrailDetails,
   onSaveTrail,
   onSetTrailStatus,
 }) => {
@@ -36,6 +38,10 @@ const TrailsPanel = ({
   const [saving, setSaving] = useState(false);
   const [actionTrailId, setActionTrailId] = useState(null);
   const [coverPreview, setCoverPreview] = useState('');
+  const [detailTrail, setDetailTrail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const detailRequestRef = useRef(0);
 
   useEffect(() => {
     if (!form.coverFile) {
@@ -108,6 +114,36 @@ const TrailsPanel = ({
     setFormError('');
     setShowPreview(false);
     setShowEditor(true);
+  };
+
+  const loadTrailDetails = async (trail) => {
+    const requestId = detailRequestRef.current + 1;
+    detailRequestRef.current = requestId;
+    setDetailTrail(trail);
+    setDetailError('');
+    setDetailLoading(true);
+    try {
+      const completeTrail = await onFetchTrailDetails(trail.id);
+      if (detailRequestRef.current === requestId) setDetailTrail(completeTrail);
+    } catch (loadError) {
+      if (detailRequestRef.current === requestId) {
+        setDetailError(loadError.message || 'The complete trail details could not be loaded.');
+      }
+    } finally {
+      if (detailRequestRef.current === requestId) setDetailLoading(false);
+    }
+  };
+
+  const closeDetails = () => {
+    detailRequestRef.current += 1;
+    setDetailTrail(null);
+    setDetailError('');
+    setDetailLoading(false);
+  };
+
+  const editFromDetails = (trail) => {
+    closeDetails();
+    openEdit(trail);
   };
 
   const closeEditor = () => {
@@ -228,10 +264,22 @@ const TrailsPanel = ({
       <TrailTable
         trails={filteredTrails}
         actionTrailId={actionTrailId}
+        onView={loadTrailDetails}
         onEdit={openEdit}
         onDuplicate={(trail) => openEdit(trail, true)}
         onChangeStatus={changeStatus}
       />
+
+      {detailTrail && (
+        <TrailDetailsModal
+          trail={detailTrail}
+          loading={detailLoading}
+          error={detailError}
+          onClose={closeDetails}
+          onRetry={() => loadTrailDetails(detailTrail)}
+          onEdit={editFromDetails}
+        />
+      )}
 
       {showEditor && (
         <TrailEditorModal

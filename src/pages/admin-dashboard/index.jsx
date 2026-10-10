@@ -18,6 +18,7 @@ import BusinessDetailsModal from './components/BusinessDetailsModal';
 import ReviewsPanel from './components/ReviewsPanel';
 import TrailsPanel from './components/TrailsPanel';
 import {
+  fetchTrailDetails,
   fetchTrails as fetchTrailsData,
   saveTrail,
   setTrailPublished,
@@ -162,6 +163,8 @@ const AdminDashboard = () => {
     showToast(`${trail.name} ${trail.id ? 'updated' : 'created'} successfully.`);
     return trailId;
   };
+
+  const handleFetchTrailDetails = useCallback((trailId) => fetchTrailDetails(trailId), []);
 
   const handleSetTrailStatus = async (trail, status) => {
     if (status === 'published' && !trail.stops?.length) throw new Error('Add at least one stop before publishing.');
@@ -617,6 +620,7 @@ const AdminDashboard = () => {
                 loading={trailsLoading}
                 error={trailsError}
                 onRetry={fetchTrails}
+                onFetchTrailDetails={handleFetchTrailDetails}
                 onSaveTrail={handleSaveTrail}
                 onSetTrailStatus={handleSetTrailStatus}
               />
@@ -784,6 +788,7 @@ const AdminDashboard = () => {
                 loading={trailsLoading}
                 error={trailsError}
                 onRetry={fetchTrails}
+                onFetchTrailDetails={handleFetchTrailDetails}
                 onSaveTrail={handleSaveTrail}
                 onSetTrailStatus={handleSetTrailStatus}
               />

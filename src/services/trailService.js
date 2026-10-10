@@ -15,10 +15,36 @@ const TRAILS_SELECT = `
       id,
       name,
       category,
+      description,
       parish,
+      address,
+      latitude,
+      longitude,
+      phone,
+      website,
       status,
       image_url,
-      business_images_urls
+      business_images_urls,
+      rating,
+      review_count
+    )
+  )
+`;
+
+const TRAIL_DETAILS_SELECT = `
+  ${TRAILS_SELECT},
+  reviews:trail_reviews(
+    id,
+    user_id,
+    trail_id,
+    rating,
+    comment,
+    images_paths,
+    reviewer:users!trail_reviews_user_id_fkey(
+      uuid,
+      name,
+      username,
+      profile_photo_url
     )
   )
 `;
@@ -35,6 +61,21 @@ export async function fetchTrails() {
 
   if (error) throw error;
   return data ?? [];
+}
+
+export async function fetchTrailDetails(trailId) {
+  const { data, error } = await supabase
+    .from(TRAILS_TABLE)
+    .select(TRAIL_DETAILS_SELECT)
+    .eq('id', trailId)
+    .single();
+
+  if (error) throw error;
+  return {
+    ...data,
+    stops: [...(data?.stops ?? [])].sort((a, b) => a.stop_order - b.stop_order),
+    reviews: [...(data?.reviews ?? [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
+  };
 }
 
 async function assertActiveStops(stops) {

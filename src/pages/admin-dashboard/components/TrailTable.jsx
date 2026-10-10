@@ -6,6 +6,7 @@ import { formatParish, normalizeDuration } from './trailConfig';
 const TrailTable = ({
   trails,
   actionTrailId,
+  onView,
   onEdit,
   onDuplicate,
   onChangeStatus,
@@ -24,7 +25,12 @@ const TrailTable = ({
       </thead>
       <tbody className="divide-y divide-[#2A377D]">
         {trails.map((trail) => (
-          <tr key={trail.id} className="text-sm text-white">
+          <tr
+            key={trail.id}
+            onClick={() => onView(trail)}
+            className="text-sm text-white cursor-pointer transition-colors hover:bg-[#24369B]/45"
+            title="View complete trail details"
+          >
             <td className="px-4 py-3">
               <div className="flex items-center gap-3">
                 <div className="w-14 h-10 rounded-md overflow-hidden bg-[#111A50] flex items-center justify-center">
@@ -45,15 +51,19 @@ const TrailTable = ({
               <button
                 type="button"
                 disabled={actionTrailId === trail.id}
-                onClick={() => onChangeStatus(trail, trail.is_active ? 'draft' : 'published')}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onChangeStatus(trail, trail.is_active ? 'draft' : 'published');
+                }}
                 className={`px-2.5 py-1 rounded-full text-xs font-bold border disabled:opacity-50 ${trail.is_active ? 'bg-green-500/15 text-green-300 border-green-500/30' : 'bg-slate-500/15 text-slate-300 border-slate-500/30'}`}
                 title="Toggle publish status"
               >
                 {trail.is_active ? 'Published' : 'Draft'}
               </button>
             </td>
-            <td className="px-4 py-3">
+            <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
               <div className="flex justify-end gap-1">
+                <Button size="xs" variant="ghost" onClick={() => onView(trail)}>View</Button>
                 <Button size="xs" variant="ghost" onClick={() => onEdit(trail)}>Edit</Button>
                 <Button size="xs" variant="ghost" onClick={() => onDuplicate(trail)}>Duplicate</Button>
                 <Button
