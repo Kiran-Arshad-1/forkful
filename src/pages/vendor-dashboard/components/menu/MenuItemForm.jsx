@@ -12,6 +12,7 @@ const CATEGORY_OPTIONS = [
 
 const MenuItemForm = ({
   isOpen = false,
+  isInline = false,
   editingId = null,
   formValues,
   formErrors,
@@ -38,20 +39,16 @@ const MenuItemForm = ({
   const currentCategoryValue = formValues.category || '';
   const isPresetCategory = CATEGORY_OPTIONS.some((c) => c.value === currentCategoryValue);
 
-  return (
+  const formCard = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(6, 21, 56, 0.85)', backdropFilter: 'blur(6px)' }}
+      className={`relative w-full rounded-3xl shadow-2xl flex flex-col overflow-hidden ${
+        isInline ? '' : 'max-w-2xl max-h-[90vh] animate-in fade-in zoom-in-95 duration-200'
+      }`}
+      style={{
+        background: '#0A2463', // Royal Navy
+        border: '1px solid #1D4ED8', // Blue Border
+      }}
     >
-      <div className="absolute inset-0" onClick={() => !saving && onClose()} />
-
-      <div
-        className="relative w-full max-w-2xl max-h-[90vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200"
-        style={{
-          background: '#0A2463', // Royal Navy
-          border: '1px solid #1D4ED8', // Blue Border
-        }}
-      >
         {/* Modal Header */}
         <div
           className="flex items-center justify-between px-6 py-5 border-b"
@@ -325,6 +322,19 @@ const MenuItemForm = ({
           </button>
         </div>
       </div>
+  );
+
+  if (isInline) {
+    return formCard;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: 'rgba(6, 21, 56, 0.85)', backdropFilter: 'blur(6px)' }}
+    >
+      <div className="absolute inset-0" onClick={() => !saving && onClose()} />
+      {formCard}
     </div>
   );
 };

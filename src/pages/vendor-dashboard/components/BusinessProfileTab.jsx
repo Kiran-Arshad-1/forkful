@@ -52,6 +52,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     setDraftBusinessProfile,
     isCreatingBusiness,
     setIsCreatingBusiness,
+    startCreateBusiness,
+    cancelCreateBusiness,
   } = useVendorProfileStore();
 
 
@@ -411,7 +413,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
               Create your business profile to get listed on ForkFul and start reaching new customers today.
             </p>
             <button
-              onClick={() => setIsCreatingBusiness(true)}
+              onClick={() => startCreateBusiness()}
               className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
               style={{ background: '#FBC33B', color: '#061538' }}
             >
@@ -671,7 +673,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
               <>
                 {hasBusiness && (
                   <button
-                    onClick={() => setIsCreatingBusiness(false)}
+                    onClick={() => cancelCreateBusiness()}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/10"
                     style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
                   >

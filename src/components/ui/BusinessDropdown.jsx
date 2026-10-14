@@ -7,6 +7,7 @@ export default function BusinessDropdown() {
     vendor_business,
     setIsCreatingBusiness,
     clearDrafts,
+    startCreateBusiness,
     selectedBusinessId,
     setSelectedBusinessId,
     openingHours,
@@ -29,8 +30,7 @@ export default function BusinessDropdown() {
   };
 
   const handleAddNewBusiness = () => {
-    clearDrafts();
-    setIsCreatingBusiness(true);
+    startCreateBusiness();
   };
 
   if (!Array.isArray(vendor_business) || vendor_business.length === 0) {

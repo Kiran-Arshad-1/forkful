@@ -12,9 +12,13 @@ import PhotoLightboxModal from './photos/PhotoLightboxModal';
 
 const PhotosTab = ({
   isOnboarding = false,
+  isCreatingBusiness = false,
+  hasBusinessDetails = false,
+  hasMenuItems = false,
   onPrev,
   onSubmitSuccess,
   onBackToBusinesses,
+  onAddBusiness,
 }) => {
   const { user } = useAuthStore();
   const {
@@ -30,6 +34,7 @@ const PhotosTab = ({
     draftMenuItems,
     selectedBusinessId,
     vendor_business,
+    startCreateBusiness,
   } = useVendorProfileStore();
 
   const [tabLoading, setTabLoading] = useState(true);
@@ -206,6 +211,212 @@ const PhotosTab = ({
 
   if (tabLoading) return <PhotosSkeleton />;
 
+  // Guard 1: If creating business but Step 1 (Business Details) is not completed
+  if (isCreatingBusiness && !hasBusinessDetails) {
+    return (
+      <div
+        className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
+        style={{
+          background: '#0D2F83',
+          border: '1px solid #1D4ED8',
+          minHeight: '340px',
+        }}
+      >
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+          style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+        >
+          <Icon name="AlertCircle" size={28} color="#FBC33B" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Step 1 Required: Business Details</h3>
+        <p className="text-xs sm:text-sm max-w-md mb-6" style={{ color: '#DCE6FF' }}>
+          Please complete your business profile in Step 1 before uploading photos.
+        </p>
+        <button
+          onClick={onBackToBusinesses}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          style={{ background: '#FBC33B', color: '#061538' }}
+        >
+          <Icon name="ArrowLeft" size={15} color="#061538" strokeWidth={2.5} />
+          <span>Go to Step 1: Business Details</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Guard 2: If creating business and Step 1 is done, but Step 2 (Menu Items) is not completed
+  if (isCreatingBusiness && !hasMenuItems) {
+    return (
+      <div
+        className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
+        style={{
+          background: '#0D2F83',
+          border: '1px solid #1D4ED8',
+          minHeight: '340px',
+        }}
+      >
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+          style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+        >
+          <Icon name="Utensils" size={28} color="#FBC33B" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Step 2 Required: Menu Items</h3>
+        <p className="text-xs sm:text-sm max-w-md mb-6" style={{ color: '#DCE6FF' }}>
+          Please add at least one menu item in Step 2 before uploading photos.
+        </p>
+        <button
+          onClick={onPrev}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          style={{ background: '#FBC33B', color: '#061538' }}
+        >
+          <Icon name="ArrowLeft" size={15} color="#061538" strokeWidth={2.5} />
+          <span>Go to Step 2: Menu Items</span>
+        </button>
+      </div>
+    );
+  }
+
+  // ── Onboarding / Business Creation Flow ─────────────────────────────────────
+  if (isOnboarding) {
+    return (
+      <div className="w-full space-y-6">
+        {toast && (
+          <div
+            className="fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-200 border"
+            style={{
+              background: toast.isError ? '#FF4D5E' : '#0A2463',
+              borderColor: toast.isError ? '#FF4D5E' : '#10D6A0',
+              color: '#FFFFFF',
+            }}
+          >
+            <Icon
+              name={toast.isError ? 'AlertCircle' : 'CheckCircle2'}
+              size={18}
+              color={toast.isError ? '#FFFFFF' : '#10D6A0'}
+            />
+            <span className="text-xs font-semibold">{toast.msg}</span>
+          </div>
+        )}
+
+        {/* Step Header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
+                style={{ background: '#3C351E', color: '#FBC33B', border: '1px solid #FBC33B' }}
+              >
+                Step 3 of 3
+              </span>
+              <h3 className="font-heading text-xl font-bold text-white">Business Photos</h3>
+            </div>
+            <p className="text-xs" style={{ color: '#9FB5F5' }}>
+              Upload photos to showcase your business to customers (minimum 3 photos required).
+            </p>
+          </div>
+
+          <div
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-xl border text-xs font-semibold"
+            style={{
+              background: (photos?.length || 0) >= 3 ? 'rgba(16, 214, 160, 0.12)' : 'rgba(251, 191, 36, 0.12)',
+              borderColor: (photos?.length || 0) >= 3 ? '#10D6A0' : '#FBC33B',
+              color: (photos?.length || 0) >= 3 ? '#10D6A0' : '#FBC33B',
+            }}
+          >
+            <Icon name={(photos?.length || 0) >= 3 ? 'CheckCircle2' : 'Camera'} size={14} />
+            <span>
+              {photos?.length || 0} / 3 Photos Uploaded {(photos?.length || 0) >= 3 ? '(Requirement Met)' : '(Minimum 3 Required)'}
+            </span>
+          </div>
+        </div>
+
+        {/* Reusable Inline PhotoUpload Component with Category Selection */}
+        <PhotoUploadModal
+          isOpen={true}
+          isInline={true}
+          submitButtonText="Add to Photos List"
+          uploading={uploading}
+          onUpload={handleUploadPhotos}
+          onClose={() => {}}
+        />
+
+        {/* Previews of Added Photos */}
+        {photos.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>Ready for Submission</span>
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={{ background: '#0D2F83', color: '#9FB5F5' }}
+              >
+                {photos.length}
+              </span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {photos.map((photo) => (
+                <PhotoCard
+                  key={photo.id}
+                  photo={photo}
+                  viewMode="grid"
+                  onSelectPhoto={handleOpenLightbox}
+                  onDeletePhoto={handleDeletePhoto}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <PhotoLightboxModal
+          photos={photos}
+          currentIndex={lightboxIndex}
+          isOpen={isLightboxOpen}
+          onClose={() => setIsLightboxOpen(false)}
+          onChangeIndex={setLightboxIndex}
+        />
+
+        {/* Wizard Footer Navigation */}
+        <div
+          className="flex items-center justify-between pt-6 mt-6 border-t"
+          style={{ borderColor: '#254477' }}
+        >
+          <button
+            type="button"
+            onClick={onPrev}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
+            style={{ border: '1px solid #254477', color: '#9FB5F5' }}
+          >
+            <Icon name="ArrowLeft" size={15} color="#9FB5F5" />
+            <span>Back to Menu Items</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSubmitOnboarding}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50"
+            style={{ background: '#FBC33B', color: '#061538' }}
+          >
+            {uploading ? (
+              <>
+                <div
+                  className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
+                  style={{ borderColor: '#061538', borderTopColor: 'transparent' }}
+                />
+                <span>Submitting for Review...</span>
+              </>
+            ) : (
+              <>
+                <span>Submit for Review</span>
+                <Icon name="Check" size={15} color="#061538" strokeWidth={2.5} />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Zero-business state (If vendor has no restaurants yet)
   if (!isOnboarding && (!Array.isArray(vendor_business) || vendor_business.length === 0)) {
     return (
@@ -228,7 +439,7 @@ const PhotosTab = ({
           Please create a restaurant business first. Once created, you will be able to upload and manage your gallery photos here.
         </p>
         <button
-          onClick={onBackToBusinesses}
+          onClick={onAddBusiness || startCreateBusiness}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
           style={{ background: '#FBC33B', color: '#061538' }}
         >
@@ -368,38 +579,6 @@ const PhotosTab = ({
         onClose={() => setIsLightboxOpen(false)}
         onChangeIndex={setLightboxIndex}
       />
-
-      {/* ── 6. Wizard Footer Buttons (During Onboarding) ── */}
-      {isOnboarding && (
-        <div
-          className="flex items-center justify-between pt-6 mt-6 border-t"
-          style={{ borderColor: '#254477' }}
-        >
-          <button
-            onClick={onPrev}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
-            style={{ border: '1px solid #254477', color: '#9FB5F5' }}
-          >
-            <Icon name="ArrowLeft" size={15} color="#9FB5F5" />
-            <span>Back to Menu</span>
-          </button>
-          <button
-            onClick={handleSubmitOnboarding}
-            disabled={uploading}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50"
-            style={{ background: '#FBC33B', color: '#061538' }}
-          >
-            {uploading ? (
-              <span>Submitting Setup...</span>
-            ) : (
-              <>
-                <span>Complete Business Setup</span>
-                <Icon name="Check" size={15} color="#061538" strokeWidth={2.5} />
-              </>
-            )}
-          </button>
-        </div>
-      )}
     </div>
   );
 };

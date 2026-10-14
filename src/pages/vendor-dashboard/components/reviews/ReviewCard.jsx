@@ -50,7 +50,7 @@ const ReviewCard = ({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const reviewerName = review.profiles?.full_name || review.username || 'Valued Customer';
-  const reviewerAvatar = review.profiles?.avatar_url;
+  const reviewerAvatar = review.profiles?.user_avatar;
   const timeAgo = formatTimeAgo(review.created_at);
   const replyTimeAgo = formatTimeAgo(review.owner_reply_at);
 
@@ -86,7 +86,6 @@ const ReviewCard = ({
         border: '1px solid #1D4ED8', // Blue Border
       }}
     >
-      {/* Top Header: Reviewer Info + Rating & Date (NO verified customer badge per instructions) */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
           {reviewerAvatar ? (

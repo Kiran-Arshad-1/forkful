@@ -30,14 +30,6 @@ const ReviewFilterSidebar = ({
             <span>Filter Reviews</span>
           </h4>
 
-          {(ratingFilter !== 'all' || timeFilter !== 'all' || statusFilter !== 'all') && (
-            <button
-              onClick={onResetFilters}
-              className="text-xs font-semibold text-[#FBC33B] hover:underline"
-            >
-              Reset
-            </button>
-          )}
         </div>
 
         {/* Dropdown 1: Rating Filter */}
@@ -116,7 +108,7 @@ const ReviewFilterSidebar = ({
           }}
         >
           <Icon name="Filter" size={14} color="#061538" strokeWidth={2.5} />
-          <span>Apply Filters</span>
+          <span>Reset Filters</span>
         </button>
       </div>
 

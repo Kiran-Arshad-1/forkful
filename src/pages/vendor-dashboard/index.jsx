@@ -15,7 +15,6 @@ import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 
 const VendorDashboard = () => {
-  const [activeTab, setActiveTab] = useState('dashboard');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { profile: authProfile, user, signOut } = useAuthStore();
@@ -34,6 +33,12 @@ const VendorDashboard = () => {
     setSelectedBusinessId,
     clearDrafts,
     fetchVendorBusiness,
+    draftBusinessProfile,
+    draftMenuItems,
+    activeTab,
+    setActiveTab,
+    startCreateBusiness,
+    cancelCreateBusiness,
   } = useVendorProfileStore();
 
   // Load store profile and businesses once
@@ -48,16 +53,24 @@ const VendorDashboard = () => {
   const vendorName = profile?.full_name || user?.email || 'Vendor';
   const vendorEmail = profile?.email || user?.email || '';
   const approvalStatus = profile?.approval_status;
-  const isOnboarding = isCreatingBusiness; // Dynamic onboarding mode based on store state
+
+  // Wizard Step Completion Guards:
+  // Step 1: Business details must be filled to advance to menu items
+  const hasBusinessDetails = Boolean(draftBusinessProfile?.form?.businessName?.trim());
+  // Step 2: At least 1 menu item must be added to advance to photos
+  const hasMenuItems = (draftMenuItems?.length || 0) > 0;
+
+  // Onboarding mode per tab:
+  const isBusinessProfileOnboarding = isCreatingBusiness;
+  const isMenuOnboarding = isCreatingBusiness && hasBusinessDetails;
+  const isPhotosOnboarding = isCreatingBusiness && hasBusinessDetails && hasMenuItems;
+
   const profilePhoto = storeProfile?.banner_image_url || storeProfile?.profile_image_url || null;
   const initials = vendorName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
 
   // ── Actions ───────────────────────────────────────────────────────────────────
   const handleAddBusiness = () => {
-    clearDrafts();
-    setIsCreatingBusiness(true);
-    setIsEditingBusiness(false);
-    setActiveTab('business-profile');
+    startCreateBusiness();
   };
 
   const handleSelectBusiness = (businessId) => {
@@ -148,23 +161,40 @@ const VendorDashboard = () => {
       <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
         <BusinessProfileTab
           approvalStatus={approvalStatus}
-          isOnboarding={isOnboarding}
+          isOnboarding={isBusinessProfileOnboarding}
           onNext={() => setActiveTab('menu')}
         />
       </div>
       <div style={{ display: activeTab === 'menu' ? 'block' : 'none' }}>
         <MenuTab
-          isOnboarding={isOnboarding}
+          isOnboarding={isMenuOnboarding}
+          isCreatingBusiness={isCreatingBusiness}
+          hasBusinessDetails={hasBusinessDetails}
+          onAddBusiness={handleAddBusiness}
           onPrev={() => setActiveTab('business-profile')}
           onNext={() => setActiveTab('photos')}
+          onBackToBusinesses={() => setActiveTab('business-profile')}
         />
       </div>
       <div style={{ display: activeTab === 'photos' ? 'block' : 'none' }}>
         <PhotosTab
-          isOnboarding={isOnboarding}
+          isOnboarding={isPhotosOnboarding}
+          isCreatingBusiness={isCreatingBusiness}
+          hasBusinessDetails={hasBusinessDetails}
+          hasMenuItems={hasMenuItems}
+          onAddBusiness={handleAddBusiness}
           onPrev={() => setActiveTab('menu')}
-          onSubmitSuccess={() => setActiveTab('business-profile')}
-          onBackToBusinesses={() => setActiveTab('business-profile')}
+          onSubmitSuccess={() => {
+            clearDrafts();
+            setIsCreatingBusiness(false);
+            if (user?.id) fetchVendorBusiness(user.id);
+            setActiveTab('business-profile');
+          }}
+          onBackToBusinesses={() => {
+            clearDrafts();
+            setIsCreatingBusiness(false);
+            setActiveTab('business-profile');
+          }}
         />
       </div>
       <div style={{ display: activeTab === 'billing' ? 'block' : 'none' }}>
@@ -178,6 +208,7 @@ const VendorDashboard = () => {
           onNavigateMenu={() => setActiveTab('menu')}
           onNavigatePhotos={() => setActiveTab('photos')}
           onBackToBusinesses={() => setActiveTab('business-profile')}
+          onAddBusiness={handleAddBusiness}
         />
       </div>
     </>

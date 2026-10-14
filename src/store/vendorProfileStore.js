@@ -55,6 +55,22 @@ const useVendorProfileStore = create((set, get) => ({
       set({ error: err?.message ?? 'Failed to load opening hours' });
     }
   },
+  activeTab: 'dashboard',
+  setActiveTab: (tab) => set({ activeTab: tab }),
+  startCreateBusiness: () => {
+    get().clearDrafts();
+    set({
+      isCreatingBusiness: true,
+      activeTab: 'business-profile',
+    });
+  },
+  cancelCreateBusiness: () => {
+    get().clearDrafts();
+    set({
+      isCreatingBusiness: false,
+      activeTab: 'business-profile',
+    });
+  },
   clearDrafts: () => set({
     draftBusinessProfile: null,
     draftMenuItems: [],
@@ -78,7 +94,7 @@ const useVendorProfileStore = create((set, get) => ({
       }
       set({
         vendor_business: businesses,
-        isCreatingBusiness: businesses.length === 0,
+        isCreatingBusiness: false,
         selectedBusinessId: selectedId,
         openingHours
       });
@@ -116,7 +132,7 @@ const useVendorProfileStore = create((set, get) => ({
         openingHours,
         vendorId: profileId,
         vendor_business: businesses,
-        isCreatingBusiness: businesses.length === 0,
+        isCreatingBusiness: false,
         selectedBusinessId: selectedId,
         isLoading: false
       });

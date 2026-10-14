@@ -176,7 +176,7 @@ const VendorSidebar = ({
               color: '#061538',
             }}
           >
-            <span>Add Your First Business</span>
+            <span>{businessCount > 0 ? 'Register New Restaurant' : 'Add Your First Business'}</span>
             <Icon name="ArrowRight" size={13} color="#061538" strokeWidth={2.5} />
           </button>
         </div>

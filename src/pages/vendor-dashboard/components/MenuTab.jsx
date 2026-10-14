@@ -91,7 +91,16 @@ const reducer = (s, a) => {
   }
 };
 
-const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
+
+const MenuTab = ({
+  isOnboarding,
+  isCreatingBusiness,
+  hasBusinessDetails,
+  onPrev,
+  onNext,
+  onBackToBusinesses,
+  onAddBusiness,
+}) => {
   const { user } = useAuthStore();
   const {
     profile,
@@ -105,6 +114,7 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
     selectedBusinessId,
     vendor_business,
     reviews,
+    startCreateBusiness,
   } = useVendorProfileStore();
 
   const items = isOnboarding ? draftMenuItems : storeItems;
@@ -133,7 +143,6 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
     fetchMenuItems(selectedBusinessId).finally(() => dispatch({ type: 'LOADED' }));
   }, [selectedBusinessId, isOnboarding]);
 
-  // Current business details from vendors_businesses table
   const selectedBusiness = Array.isArray(vendor_business)
     ? vendor_business.find((b) => b.id === selectedBusinessId) || vendor_business[0]
     : null;
@@ -143,7 +152,6 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
   const availableItems = items?.filter((i) => i.is_available !== false).length || 0;
   const outOfStockItems = items?.filter((i) => i.is_available === false).length || 0;
 
-  // Dynamic categories from real database items (NO dummy categories)
   const dynamicCategories = useMemo(() => {
     if (!items || items.length === 0) return DEFAULT_CATEGORIES;
 
@@ -161,23 +169,10 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
       }
     });
 
-    // const activeList = [];
-    // map.forEach((label, key) => {
-    //   const count = items.filter((it) => {
-    //     if (!it.category) return false;
-    //     const itKey = it.category.toLowerCase().trim();
-    //     if (key === 'beverage' && (itKey === 'drinks' || itKey === 'drink' || itKey === 'beverages')) return true;
-    //     return itKey === key;
-    //   }).length;
-    //   if (count > 0) {
-    //     activeList.push({ key, label });
-    //   }
-    // });
 
     return DEFAULT_CATEGORIES;
   }, [items]);
 
-  // Category counts computed strictly from actual items
   const categoryCounts = useMemo(() => {
     const counts = { all: totalItems };
     dynamicCategories.forEach((cat) => {
@@ -191,7 +186,6 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
     return counts;
   }, [items, totalItems, dynamicCategories]);
 
-  // Price range counts strictly from database items
   const priceRangeCounts = useMemo(() => {
     return {
       under_10: (items || []).filter((i) => parseFloat(i.price || 0) < 10).length,
@@ -419,6 +413,159 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
 
   if (tabLoading) return <MenuSkeleton />;
 
+  // Guard: If creating business but Step 1 (Business Details) is not completed, prompt vendor to complete Step 1
+  if (isCreatingBusiness && !hasBusinessDetails) {
+    return (
+      <div
+        className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
+        style={{
+          background: '#0D2F83',
+          border: '1px solid #1D4ED8',
+          minHeight: '340px',
+        }}
+      >
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+          style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+        >
+          <Icon name="AlertCircle" size={28} color="#FBC33B" />
+        </div>
+        <h3 className="text-xl font-bold text-white mb-2">Step 1 Required: Business Details</h3>
+        <p className="text-xs sm:text-sm max-w-md mb-6" style={{ color: '#DCE6FF' }}>
+          Please complete your business profile in Step 1 before adding menu items.
+        </p>
+        <button
+          onClick={onPrev || onBackToBusinesses}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          style={{ background: '#FBC33B', color: '#061538' }}
+        >
+          <Icon name="ArrowLeft" size={15} color="#061538" strokeWidth={2.5} />
+          <span>Go to Step 1: Business Details</span>
+        </button>
+      </div>
+    );
+  }
+
+  // ── Onboarding / Business Creation Flow ─────────────────────────────────────
+  if (isOnboarding) {
+    const isFormVisible = showForm || (items || []).length === 0;
+
+    return (
+      <div className="w-full space-y-6">
+        {/* Step Header */}
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className="px-2.5 py-0.5 rounded-full text-[11px] font-bold tracking-wide"
+                style={{ background: '#3C351E', color: '#FBC33B', border: '1px solid #FBC33B' }}
+              >
+                Step 2 of 3
+              </span>
+              <h3 className="font-heading text-xl font-bold text-white">Menu Items</h3>
+            </div>
+            <p className="text-xs" style={{ color: '#9FB5F5' }}>
+              Add at least 1 menu item to continue your business setup ({items?.length || 0} added so far).
+            </p>
+          </div>
+
+          {!isFormVisible && (items?.length || 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'FORM_ADD' })}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              style={{ background: '#FBC33B', color: '#061538' }}
+            >
+              <Icon name="Plus" size={15} color="#061538" strokeWidth={2.5} />
+              <span>Add Another Item</span>
+            </button>
+          )}
+        </div>
+
+        {/* Inline Form (immediately visible when 0 items or when user clicked Add/Edit) */}
+        {isFormVisible && (
+          <MenuItemForm
+            isOpen={true}
+            isInline={true}
+            editingId={editingId}
+            formValues={formValues}
+            formErrors={formErrors}
+            saving={saving}
+            onChangeField={(field, value) => dispatch({ type: 'FORM_FIELD', field, value })}
+            onAddImages={handleAddImages}
+            onRemoveImage={handleRemoveImage}
+            onSave={handleSave}
+            onClose={() => {
+              if ((items || []).length > 0) {
+                dispatch({ type: 'FORM_CLOSE' });
+              }
+            }}
+          />
+        )}
+
+        {/* Existing Added Items List (shown below or when form is closed) */}
+        {items && items.length > 0 && (
+          <div className="space-y-3 pt-2">
+            <h4 className="text-sm font-bold text-white flex items-center gap-2">
+              <span>Added Dishes</span>
+              <span
+                className="px-2 py-0.5 rounded-full text-xs font-semibold"
+                style={{ background: '#0D2F83', color: '#9FB5F5' }}
+              >
+                {items.length}
+              </span>
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {items.map((item) => (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  viewMode="grid"
+                  onEdit={(it) => dispatch({ type: 'FORM_EDIT', item: it })}
+                  onDelete={handleDelete}
+                  onToggleAvailability={handleToggleAvailability}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Wizard Footer Navigation */}
+        <div
+          className="flex items-center justify-between pt-6 mt-6 border-t"
+          style={{ borderColor: '#254477' }}
+        >
+          <button
+            type="button"
+            onClick={onPrev}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
+            style={{ border: '1px solid #254477', color: '#9FB5F5' }}
+          >
+            <Icon name="ArrowLeft" size={15} color="#9FB5F5" />
+            <span>Back to Business Details</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!items || items.length === 0) {
+                toast.error('Please add at least one menu item before proceeding.');
+                dispatch({ type: 'FORM_ADD' });
+                return;
+              }
+              onNext();
+            }}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer"
+            style={{ background: '#FBC33B', color: '#061538' }}
+          >
+            <span>Next: Upload Photos</span>
+            <Icon name="ArrowRight" size={15} color="#061538" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   // Zero-business state (If vendor has no restaurants yet)
   if (!isOnboarding && (!Array.isArray(vendor_business) || vendor_business.length === 0)) {
     return (
@@ -441,8 +588,8 @@ const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
           Please create a restaurant business first. Once created, you will be able to add and manage your menu items here.
         </p>
         <button
-          onClick={onBackToBusinesses}
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all"
+          onClick={onAddBusiness || startCreateBusiness}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
           style={{ background: '#FBC33B', color: '#061538' }}
         >
           <Icon name="Plus" size={15} color="#061538" strokeWidth={2.5} />

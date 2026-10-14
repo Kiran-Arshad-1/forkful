@@ -38,6 +38,7 @@ const ReviewsTab = ({
   onNavigateMenu,
   onNavigatePhotos,
   onBackToBusinesses,
+  onAddBusiness,
 }) => {
   const {
     reviews = [],
@@ -46,6 +47,7 @@ const ReviewsTab = ({
     vendor_business,
     replyToReview,
     deleteReviewReply,
+    startCreateBusiness,
   } = useVendorProfileStore();
 
   const [tabLoading, setTabLoading] = useState(false);
@@ -184,7 +186,7 @@ const ReviewsTab = ({
           Please create a restaurant business first. Once created, customer reviews and responses will appear here.
         </p>
         <button
-          onClick={onBackToBusinesses}
+          onClick={onAddBusiness || startCreateBusiness}
           className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
           style={{ background: '#FBC33B', color: '#061538' }}
         >
