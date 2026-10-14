@@ -260,7 +260,7 @@ const useVendorProfileStore = create((set, get) => ({
     const { profile, selectedBusinessId } = get();
     if (!profile) throw new Error('Vendor profile not loaded');
     if (!selectedBusinessId) throw new Error('No business selected');
-    const profileId = profile?.vendor_id;
+    const profileId = profile?.vendor_id || get().vendorId || profile?.id;
     set({ isSaving: true, error: null });
     try {
       const newItem = await svc.addMenuItem(profileId, { ...item, business_id: selectedBusinessId });
@@ -311,16 +311,54 @@ const useVendorProfileStore = create((set, get) => ({
     }
   },
 
-  // ── Reviews (read-only) ─────────────────────────────────────────────────────
-  fetchReviews: async () => {
-    const { vendorId } = get();
-    if (!vendorId) return;
+  // ── Reviews & Replies ──────────────────────────────────────────────────────
+  fetchReviews: async (businessId) => {
+    if (!businessId) {
+      set({ reviews: [] });
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
-      const reviews = await svc.fetchVendorReviews(vendorId);
+      const reviews = await svc.fetchBusinessReviews(businessId);
       set({ reviews, isLoading: false });
     } catch (err) {
       set({ isLoading: false, error: err?.message });
+    }
+  },
+
+  replyToReview: async (reviewId, replyText) => {
+    console.log('inside replyToReview', reviewId, replyText);
+    const { selectedBusinessId } = get();
+    if (!selectedBusinessId) throw new Error('No business selected');
+    set({ isSaving: true, error: null });
+    try {
+      const updated = await svc.updateBusinessReviewReply(reviewId, selectedBusinessId, replyText);
+      console.log("supabase res", updated)
+      set((s) => ({
+        reviews: s.reviews.map((r) => (r.id === reviewId ? updated : r)),
+        isSaving: false,
+      }));
+      return updated;
+    } catch (err) {
+      set({ isSaving: false, error: err?.message ?? 'Failed to submit reply' });
+      throw err;
+    }
+  },
+
+  deleteReviewReply: async (reviewId) => {
+    const { selectedBusinessId } = get();
+    if (!selectedBusinessId) throw new Error('No business selected');
+    set({ isSaving: true, error: null });
+    try {
+      const updated = await svc.updateBusinessReviewReply(reviewId, selectedBusinessId, '');
+      set((s) => ({
+        reviews: s.reviews.map((r) => (r.id === reviewId ? updated : r)),
+        isSaving: false,
+      }));
+      return updated;
+    } catch (err) {
+      set({ isSaving: false, error: err?.message ?? 'Failed to delete reply' });
+      throw err;
     }
   },
 
@@ -334,44 +372,44 @@ const useVendorProfileStore = create((set, get) => ({
     try {
       const paths = await svc.fetchBusinessImagePathsByBusiness(businessId);
       const photos = await Promise.all((paths ?? []).map(async (path) => {
-        const isUrl = path.startsWith('http');
-        const storagePath = isUrl ? svc.getBusinessPhotoPathFromUrl(path) : path;
-        const photoUrl = isUrl ? path : await svc.getBusinessPhotoSignedUrl(path);
+        const cleanPath = path.split('?')[0];
+        const isUrl = cleanPath.startsWith('http');
+        const storagePath = isUrl ? svc.getBusinessPhotoPathFromUrl(cleanPath) : cleanPath;
+        const photoUrl = isUrl ? path : await svc.getBusinessPhotoSignedUrl(cleanPath);
         const fileName = storagePath.split('/').pop() || '';
+        const category = svc.detectPhotoCategory(path);
 
         return {
           id: path,
           storage_path: storagePath,
           photo_url: photoUrl,
+          category,
           caption: normalizePhotoCaption(fileName) || null,
         };
       }));
 
-
       set({ photos, isLoading: false });
-
     } catch (err) {
       set({ isLoading: false, error: err?.message });
     }
   },
 
-  uploadPhoto: async (file, caption) => {
-    const { profile, selectedBusinessId } = get();
-    if (!profile) throw new Error('No profile loaded');
+  uploadPhoto: async (file, caption, category = 'food') => {
+    const { profile, vendorId, selectedBusinessId } = get();
+    const effectiveVendorId = profile?.vendor_id || vendorId || profile?.id;
+    if (!profile && !effectiveVendorId) throw new Error('No profile loaded');
     if (!selectedBusinessId) throw new Error('No business selected');
     set({ isSaving: true, error: null });
     try {
-      const result = await svc.uploadBusinessPhotoForBusiness(file, selectedBusinessId, profile.vendor_id, caption);
-      ('got result from uploadBusinessPhotoForBusiness:', result);
+      const result = await svc.uploadBusinessPhotoForBusiness(file, selectedBusinessId, effectiveVendorId, caption, category);
       const newPhoto = {
         id: result.publicUrl,
-        storage_path: svc.getBusinessPhotoPathFromUrl(result.publicUrl),
+        storage_path: result.path || svc.getBusinessPhotoPathFromUrl(result.publicUrl),
         photo_url: result.publicUrl,
+        category: result.category || category,
         caption: caption?.trim() || normalizePhotoCaption(file?.name || ''),
-        status: 'pending',
       };
       set((s) => ({ photos: [newPhoto, ...s.photos], isSaving: false }));
-
       return newPhoto;
     } catch (err) {
       set({ isSaving: false, error: err?.message });
@@ -380,15 +418,13 @@ const useVendorProfileStore = create((set, get) => ({
   },
 
   deletePhoto: async (id, storagePath) => {
-    const { profile, selectedBusinessId } = get();
+    const { profile, vendorId, selectedBusinessId } = get();
+    const effectiveVendorId = profile?.vendor_id || vendorId || profile?.id;
     const previous = get().photos;
     set((s) => ({ photos: s.photos.filter((p) => p.id !== id) }));
     try {
-      if (!profile) throw new Error('No profile loaded');
       if (!selectedBusinessId) throw new Error('No business selected');
-      await svc.deleteBusinessPhotoForBusiness(selectedBusinessId, profile.vendor_id, storagePath || id);
-      ('finally deleted the photo please check the db');
-
+      await svc.deleteBusinessPhotoForBusiness(selectedBusinessId, effectiveVendorId, storagePath || id);
     } catch (err) {
       set({ photos: previous, error: err?.message });
       throw err;
@@ -531,6 +567,7 @@ const useVendorProfileStore = create((set, get) => ({
         }
         await svc.addMenuItem(profileId, {
           name: item.name,
+          category: item.category,
           description: item.description,
           price: item.price,
           is_available: item.is_available ?? true,

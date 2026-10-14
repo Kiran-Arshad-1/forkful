@@ -4,7 +4,9 @@ import Icon from 'components/AppIcon';
 import useAuthStore from '../../store/authStore';
 import useVendorProfileStore from '../../store/vendorProfileStore';
 
-import VendorDashboardTabs from 'components/ui/VendorDashboardTabs';
+import VendorSidebar from './components/VendorSidebar';
+import VendorHeader from './components/VendorHeader';
+import DashboardOverviewTab from './components/DashboardOverviewTab';
 import BusinessProfileTab from './components/BusinessProfileTab';
 import MenuTab from './components/MenuTab';
 import PhotosTab from './components/PhotosTab';
@@ -13,8 +15,8 @@ import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 
 const VendorDashboard = () => {
-  const [activeTab, setActiveTab] = useState('business-profile');
-  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const { profile: authProfile, user, signOut } = useAuthStore();
 
@@ -26,11 +28,20 @@ const VendorDashboard = () => {
     uploadBannerImage,
     vendor_business,
     isCreatingBusiness,
+    setIsCreatingBusiness,
+    setIsEditingBusiness,
+    selectedBusinessId,
+    setSelectedBusinessId,
+    clearDrafts,
+    fetchVendorBusiness,
   } = useVendorProfileStore();
 
-  // Load store profile once
+  // Load store profile and businesses once
   useEffect(() => {
-    if (user?.id && !storeProfile) fetchProfile(user.id);
+    if (user?.id) {
+      if (!storeProfile) fetchProfile(user.id);
+      fetchVendorBusiness(user.id);
+    }
   }, [user?.id, storeProfile]);
 
   const profile = storeProfile || authProfile;
@@ -38,9 +49,22 @@ const VendorDashboard = () => {
   const vendorEmail = profile?.email || user?.email || '';
   const approvalStatus = profile?.approval_status;
   const isOnboarding = isCreatingBusiness; // Dynamic onboarding mode based on store state
-  ('[Dashboard Mode]', { isOnboarding, vendor_business, approvalStatus });
-  const profilePhoto = storeProfile?.banner_image_url || null;
+  const profilePhoto = storeProfile?.banner_image_url || storeProfile?.profile_image_url || null;
   const initials = vendorName.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
+
+  // ── Actions ───────────────────────────────────────────────────────────────────
+  const handleAddBusiness = () => {
+    clearDrafts();
+    setIsCreatingBusiness(true);
+    setIsEditingBusiness(false);
+    setActiveTab('business-profile');
+  };
+
+  const handleSelectBusiness = (businessId) => {
+    setSelectedBusinessId(businessId);
+    setIsCreatingBusiness(false);
+    setIsEditingBusiness(false);
+  };
 
   // ── Edit Profile modal ────────────────────────────────────────────────────────
   const [showEditModal, setShowEditModal] = useState(false);
@@ -60,7 +84,6 @@ const VendorDashboard = () => {
     setPhotoFile(null);
     setPhotoPreview(storeProfile?.profile_image_url || null);
     setEditError('');
-    setShowUserMenu(false);
     setShowEditModal(true);
   };
 
@@ -78,17 +101,12 @@ const VendorDashboard = () => {
       return;
     }
     setEditError('');
+    setEditSaving(true);
     try {
       const nameChanged = editName.trim() !== (storeProfile?.full_name || '');
       const addressChanged = editAddress.trim() !== (storeProfile?.address || '');
       const contactPhoneChanged = editContactNumber.trim() !== (storeProfile?.contact_phone || '');
       if (nameChanged || addressChanged || contactPhoneChanged) {
-        console.log({
-          full_name: editName.trim(),
-          address: editAddress,
-          contact_phone: editContactNumber,
-        });
-
         await updateBasicInfo({
           full_name: editName.trim(),
           address: editAddress,
@@ -115,6 +133,18 @@ const VendorDashboard = () => {
   // Always-mounted tabs — never unmount so tab state and fetched data survive tab switches
   const tabs = (
     <>
+      <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
+        <DashboardOverviewTab
+          hasBusiness={Array.isArray(vendor_business) && vendor_business.length > 0}
+          businessCount={vendor_business?.length || 0}
+          approvalStatus={approvalStatus}
+          onNavigateToTab={(tab) => {
+            if (tab === 'settings') openEditModal();
+            else setActiveTab(tab);
+          }}
+          onAddBusiness={handleAddBusiness}
+        />
+      </div>
       <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
         <BusinessProfileTab
           approvalStatus={approvalStatus}
@@ -148,176 +178,110 @@ const VendorDashboard = () => {
     </>
   );
 
-  // ── Avatar helper ─────────────────────────────────────────────────────────────
-  const AvatarCircle = ({ size = 8, textSize = 'xs' }) =>
-    profilePhoto ? (
-      <img
-        src={profilePhoto}
-        alt={vendorName}
-        className={`w-${size} h-${size} rounded-full object-cover flex-shrink-0`}
-        style={{ border: '2px solid rgba(201,168,76,0.5)' }}
-      />
-    ) : (
-      <div
-        className={`w-${size} h-${size} rounded-full flex items-center justify-center text-${textSize} font-bold flex-shrink-0`}
-        style={{ background: '#C9A84C', color: '#0F1A5C' }}
-      >
-        {initials}
-      </div>
-    );
-
   return (
-    <div className="min-h-screen flex flex-col" style={{ background: '#0F1A5C' }}>
+    <div className="min-h-screen flex text-white font-body" style={{ background: '#061538' }}>
+      {/* ── Left Sidebar ── */}
+      <VendorSidebar
+        activeTab={activeTab}
+        onTabChange={(tab) => {
+          if (tab === 'settings') {
+            openEditModal();
+          } else {
+            setActiveTab(tab);
+          }
+        }}
+        businessCount={vendor_business?.length || 0}
+        onAddBusiness={handleAddBusiness}
+        isOpen={mobileSidebarOpen}
+        onClose={() => setMobileSidebarOpen(false)}
+      />
 
-      {/* ── Top Header ── */}
-      <header
-        className="fixed top-0 left-0 right-0 h-16 flex items-center px-4 md:px-6 lg:px-8"
-        style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(201,168,76,0.3)', zIndex: 9999 }}
-      >
-        <div className="flex items-center justify-between w-full max-w-7xl mx-auto">
-          {/* Logo */}
-          <div className="flex items-center gap-2.5">
-            <img src="/assets/images/IG_Post-1772727015258.png" alt="ForkFul logo" className="h-10 w-auto object-contain" />
-            <span className="hidden md:block mx-1" style={{ color: 'rgba(155,164,232,0.5)' }}>/</span>
-            <span className="hidden md:block text-sm font-body truncate max-w-[160px]" style={{ color: '#9BA4E8' }}>{vendorName}</span>
+      {/* ── Main Layout Column ── */}
+      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+        {/* ── Top Header ── */}
+        <VendorHeader
+          vendorName={vendorName}
+          vendorEmail={vendorEmail}
+          profilePhoto={profilePhoto}
+          initials={initials}
+          businesses={vendor_business || []}
+          selectedBusinessId={selectedBusinessId}
+          onSelectBusiness={handleSelectBusiness}
+          onAddBusiness={handleAddBusiness}
+          onOpenEditProfile={openEditModal}
+          onLogout={handleLogout}
+          onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
+        />
+
+        {/* ── Content View ── */}
+        <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+          {/* Mobile Status Badge */}
+          <div
+            className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit"
+            style={{
+              background: approvalStatus === 'approved' ? 'rgba(16,214,160,0.12)' : 'rgba(251,191,36,0.12)',
+              color: approvalStatus === 'approved' ? '#10D6A0' : '#FBBF24',
+              borderColor: approvalStatus === 'approved' ? 'rgba(16,214,160,0.3)' : 'rgba(251,191,36,0.3)',
+            }}
+          >
+            <Icon
+              name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
+              size={12}
+              color={approvalStatus === 'approved' ? '#10D6A0' : '#FBBF24'}
+            />
+            {approvalStatus === 'approved' ? 'Approved & Live' : 'Pending Approval'}
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <button
-              className="hidden md:flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-lg border transition-all"
-              style={{ borderColor: 'rgba(201,168,76,0.4)', color: '#C9A84C' }}
-            >
-              <Icon name="ExternalLink" size={14} color="#C9A84C" />
-              View Listing
-            </button>
+          <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
+            {tabs}
+          </div>
+        </main>
 
-            {/* User Menu */}
-            <div className="relative">
+        {/* ── Footer ── */}
+        <footer
+          className="mt-auto py-5"
+          style={{ background: '#061538', borderTop: '1px solid #254477' }}
+        >
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <p className="text-xs" style={{ color: '#9FB5F5' }}>
+              &copy; {new Date()?.getFullYear()} ForkFul. All rights reserved.
+            </p>
+            <div className="flex items-center gap-4">
               <button
-                onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center gap-2 px-2 py-1.5 rounded-lg transition-all min-h-[44px] hover:bg-white/10"
-                aria-label="User menu"
-                aria-expanded={showUserMenu}
+                onClick={() => navigate('/vendor-login')}
+                className="text-xs transition-colors hover:text-white"
+                style={{ color: '#9FB5F5' }}
               >
-                <AvatarCircle size={8} textSize="xs" />
-                <span className="hidden md:block text-sm font-medium max-w-[120px] truncate" style={{ color: '#FFFFFF' }}>
-                  {vendorName}
-                </span>
-                <Icon name="ChevronDown" size={14} color="#9BA4E8" />
+                Help &amp; Support
               </button>
-
-              {showUserMenu && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setShowUserMenu(false)} aria-hidden="true" />
-                  <div
-                    className="absolute right-0 top-full mt-1 w-56 rounded-xl shadow-lg z-50 overflow-hidden"
-                    style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}
-                  >
-                    {/* Profile info */}
-                    <div className="flex items-center gap-3 px-3 py-3" style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
-                      <AvatarCircle size={10} textSize="sm" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: '#FFFFFF' }}>{vendorName}</p>
-                        <p className="text-xs truncate" style={{ color: '#9BA4E8' }}>{vendorEmail}</p>
-                      </div>
-                    </div>
-
-                    {/* Edit Profile */}
-                    <button
-                      onClick={openEditModal}
-                      className="flex items-center gap-2 w-full px-3 py-2.5 text-sm transition-all hover:bg-white/10"
-                      style={{ color: '#C9A84C' }}
-                    >
-                      <Icon name="UserPen" size={15} color="#C9A84C" />
-                      Edit Profile
-                    </button>
-
-                    {/* Sign Out */}
-                    <div style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
-                      <button
-                        onClick={handleLogout}
-                        className="flex items-center gap-2 w-full px-3 py-2.5 text-sm transition-all hover:bg-red-500/10"
-                        style={{ color: '#F87171' }}
-                      >
-                        <Icon name="LogOut" size={15} color="#F87171" />
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </div>
-        </div>
-      </header>
-
-      {/* Tabs Navigation */}
-      <div className="pt-16">
-        <VendorDashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
+        </footer>
       </div>
-
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-4 md:px-6 lg:px-8 py-6 lg:py-8">
-        {/* Mobile Status Badge */}
-        <div
-          className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit"
-          style={{
-            background: approvalStatus === 'approved' ? 'rgba(16,185,129,0.1)' : 'rgba(201,168,76,0.1)',
-            color: approvalStatus === 'approved' ? '#10B981' : '#C9A84C',
-            borderColor: approvalStatus === 'approved' ? 'rgba(16,185,129,0.3)' : 'rgba(201,168,76,0.3)',
-          }}
-        >
-          <Icon
-            name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
-            size={12}
-            color={approvalStatus === 'approved' ? '#10B981' : '#C9A84C'}
-          />
-          {approvalStatus === 'approved' ? 'Approved' : 'Pending Approval'}
-        </div>
-
-        <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>
-          {tabs}
-        </div>
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-8 py-6" style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
-        <div className="max-w-4xl mx-auto px-4 md:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p className="text-xs font-caption" style={{ color: '#9BA4E8' }}>
-            &copy; {new Date()?.getFullYear()} ForkFul. All rights reserved.
-          </p>
-          <div className="flex items-center gap-4">
-            <button onClick={() => navigate('/vendor-login')} className="text-xs font-caption hover:underline" style={{ color: '#9BA4E8' }}>
-              Help
-            </button>
-          </div>
-        </div>
-      </footer>
 
       {/* ── Edit Profile Modal ─────────────────────────────────────────────────── */}
       {showEditModal && (
         <div
           className="fixed inset-0 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.7)', zIndex: 99999 }}
+          style={{ background: 'rgba(6,21,56,0.85)', zIndex: 99999, backdropFilter: 'blur(4px)' }}
         >
           <div className="absolute inset-0" onClick={() => !editSaving && setShowEditModal(false)} />
           <div
             className="relative w-full max-w-md rounded-2xl shadow-2xl overflow-hidden"
-            style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.35)' }}
+            style={{ background: '#0A2463', border: '1px solid #1D4ED8' }}
           >
             {/* Modal header */}
             <div
               className="flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}
+              style={{ borderBottom: '1px solid #254477' }}
             >
-              <h2 className="font-heading font-semibold text-base" style={{ color: '#FFFFFF' }}>
+              <h2 className="font-heading font-semibold text-base text-white">
                 Edit Profile
               </h2>
               <button
                 onClick={() => !editSaving && setShowEditModal(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white/10 transition-all"
-                style={{ color: '#9BA4E8' }}
+                style={{ color: '#9FB5F5' }}
               >
                 <Icon name="X" size={17} />
               </button>
@@ -334,12 +298,12 @@ const VendorDashboard = () => {
                       src={photoPreview}
                       alt="Profile preview"
                       className="w-24 h-24 rounded-full object-cover"
-                      style={{ border: '3px solid rgba(201,168,76,0.5)' }}
+                      style={{ border: '3px solid #FBC33B' }}
                     />
                   ) : (
                     <div
                       className="w-24 h-24 rounded-full flex items-center justify-center text-2xl font-bold"
-                      style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                      style={{ background: '#FBC33B', color: '#061538' }}
                     >
                       {initials}
                     </div>
@@ -348,16 +312,16 @@ const VendorDashboard = () => {
                   <button
                     onClick={() => photoInputRef.current?.click()}
                     className="absolute bottom-0 right-0 w-8 h-8 rounded-full flex items-center justify-center transition-all hover:opacity-90"
-                    style={{ background: '#C9A84C', border: '2px solid #1B2A8B' }}
+                    style={{ background: '#FBC33B', border: '2px solid #0A2463' }}
                     title="Change photo"
                   >
-                    <Icon name="Camera" size={14} color="#0F1A5C" />
+                    <Icon name="Camera" size={14} color="#061538" />
                   </button>
                 </div>
                 <button
                   onClick={() => photoInputRef.current?.click()}
-                  className="text-xs font-medium transition-all hover:underline"
-                  style={{ color: '#C9A84C' }}
+                  className="text-xs font-semibold transition-all hover:underline"
+                  style={{ color: '#FBC33B' }}
                 >
                   {photoPreview ? 'Change Photo' : 'Upload Photo'}
                 </button>
@@ -373,7 +337,7 @@ const VendorDashboard = () => {
               {/* Profile Name */}
               <div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9FB5F5' }}>
                     Name
                   </label>
                   <input
@@ -381,18 +345,17 @@ const VendorDashboard = () => {
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
                     placeholder="Enter Name"
-                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all text-white placeholder:text-[#647DBA]"
                     style={{
-                      background: '#0F1A5C',
-                      border: '1px solid rgba(201,168,76,0.35)',
-                      color: '#FFFFFF',
+                      background: '#081C49',
+                      border: '1px solid #1D4ED8',
                     }}
-                    onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                    onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#1D4ED8'; }}
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
+                  <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9FB5F5' }}>
                     Address
                   </label>
                   <input
@@ -400,17 +363,16 @@ const VendorDashboard = () => {
                     value={editAddress}
                     onChange={(e) => setEditAddress(e.target.value)}
                     placeholder="Enter Address"
-                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                    className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all text-white placeholder:text-[#647DBA]"
                     style={{
-                      background: '#0F1A5C',
-                      border: '1px solid rgba(201,168,76,0.35)',
-                      color: '#FFFFFF',
+                      background: '#081C49',
+                      border: '1px solid #1D4ED8',
                     }}
-                    onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
-                    onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                    onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                    onBlur={(e) => { e.target.style.borderColor = '#1D4ED8'; }}
                   />
                 </div>
-                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9BA4E8' }}>
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9FB5F5' }}>
                   Contact Number
                 </label>
                 <input
@@ -418,21 +380,23 @@ const VendorDashboard = () => {
                   value={editContactNumber}
                   onChange={(e) => setEditContactNumber(e.target.value)}
                   placeholder="Enter contact number"
-                  className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all"
+                  className="w-full mb-3 px-3 py-2.5 rounded-lg text-sm outline-none transition-all text-white placeholder:text-[#647DBA]"
                   style={{
-                    background: '#0F1A5C',
-                    border: '1px solid rgba(201,168,76,0.35)',
-                    color: '#FFFFFF',
+                    background: '#081C49',
+                    border: '1px solid #1D4ED8',
                   }}
-                  onFocus={(e) => { e.target.style.borderColor = '#C9A84C'; }}
-                  onBlur={(e) => { e.target.style.borderColor = 'rgba(201,168,76,0.35)'; }}
+                  onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#1D4ED8'; }}
                 />
               </div>
 
               {/* Error */}
               {editError && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs" style={{ background: 'rgba(248,113,113,0.1)', color: '#F87171' }}>
-                  <Icon name="AlertCircle" size={13} color="#F87171" />
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs"
+                  style={{ background: 'rgba(255,77,94,0.15)', color: '#FF4D5E', border: '1px solid rgba(255,77,94,0.3)' }}
+                >
+                  <Icon name="AlertCircle" size={13} color="#FF4D5E" />
                   {editError}
                 </div>
               )}
@@ -441,25 +405,27 @@ const VendorDashboard = () => {
             {/* Modal footer */}
             <div
               className="flex items-center justify-end gap-2 px-5 py-4"
-              style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}
+              style={{ borderTop: '1px solid #254477' }}
             >
               <button
                 onClick={() => !editSaving && setShowEditModal(false)}
                 disabled={editSaving}
                 className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:bg-white/10 disabled:opacity-50"
-                style={{ color: '#9BA4E8', border: '1px solid rgba(155,164,232,0.3)' }}
+                style={{ color: '#9FB5F5', border: '1px solid #254477' }}
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveProfile}
                 disabled={editSaving}
-                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                className="flex items-center gap-2 px-5 py-2 rounded-lg text-sm font-bold transition-all hover:brightness-110 disabled:opacity-60"
+                style={{ background: '#FBC33B', color: '#061538' }}
               >
                 {editSaving && (
-                  <div className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
-                    style={{ borderColor: '#0F1A5C', borderTopColor: 'transparent' }} />
+                  <div
+                    className="w-3.5 h-3.5 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: '#061538', borderTopColor: 'transparent' }}
+                  />
                 )}
                 {editSaving ? 'Saving…' : 'Save Changes'}
               </button>

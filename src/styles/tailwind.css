@@ -9,43 +9,69 @@
 @tailwind utilities;
 
 :root {
-  /* ForkFul Brand Colors */
-  --color-background: #0F1A5C;        /* deep royal blue */
-  --color-foreground: #FFFFFF;        /* white */
+  /* ── 1. Primary Colors ────────────────────────────────────────────────────────── */
+  --color-deep-navy: #061538;        /* Main background, sidebar, canvas */
+  --color-royal-navy: #0A2463;       /* Header, navigation bars, major layout surfaces */
+  --color-royal-blue: #0D2F83;       /* Cards, selected panels, secondary containers */
+  --color-bright-navy: #123B96;      /* Nested cards, hover states, active elements */
+  --color-forkful-gold: #FBC33B;     /* Primary CTA, active nav, icons, rating stars */
 
-  --color-card: #1B2A8B;              /* royal blue card */
-  --color-card-foreground: #FFFFFF;   /* white */
+  /* ── 2. Text Colors ───────────────────────────────────────────────────────────── */
+  --color-pure-white: #FFFFFF;       /* Headings, card titles, primary labels */
+  --color-soft-white: #DCE6FF;       /* Body text, descriptions, secondary text */
+  --color-muted-periwinkle: #9FB5F5; /* Helper text, timestamps, subtitles, inactive nav */
+  --color-muted-blue: #647DBA;       /* Disabled text, subtle icons, low-priority */
 
-  --color-popover: #1E3A9E;           /* slightly lighter royal blue */
-  --color-popover-foreground: #FFFFFF; /* white */
+  /* ── 3. Borders, surfaces & interactive states ────────────────────────────────── */
+  --color-blue-border: #1D4ED8;      /* Card outlines, input borders, dividers */
+  --color-subtle-border: #254477;    /* Nested cards, low-emphasis separators */
+  --color-dark-input: #081C49;       /* Text fields, dropdowns, search inputs */
+  --color-hover-blue: #17439B;       /* Buttons, menu items, clickable cards hover */
+  --color-gold-tint: #3C351E;        /* Active navigation subtle gold background */
 
-  --color-primary: #C9A84C;           /* antique gold */
-  --color-primary-foreground: #0F1A5C; /* deep blue on gold */
+  /* ── 4. Status Colors ─────────────────────────────────────────────────────────── */
+  --color-success-green: #10D6A0;    /* Approved & Live, open status, positive feedback */
+  --color-warning-amber: #FBBF24;    /* Pending approvals, notifications, warning badges */
+  --color-danger-red: #FF4D5E;       /* Closed status, failed payments, validation errors */
+  --color-info-blue: #6385FF;        /* Informational badges, links, neutral notifications */
 
-  --color-secondary: #9BA4E8;         /* lavender/periwinkle */
-  --color-secondary-foreground: #0F1A5C; /* deep blue */
+  /* ── Semantic System Mappings ─────────────────────────────────────────────────── */
+  --color-background: #061538;        /* deep-navy */
+  --color-foreground: #FFFFFF;        /* pure-white */
 
-  --color-accent: #C9A84C;            /* gold accent */
-  --color-accent-foreground: #0F1A5C; /* deep blue */
+  --color-card: #0D2F83;              /* royal-blue */
+  --color-card-foreground: #DCE6FF;   /* soft-white */
 
-  --color-muted: #1E3A9E;             /* slightly lighter royal blue */
-  --color-muted-foreground: #9BA4E8;  /* lavender */
+  --color-popover: #0A2463;           /* royal-navy */
+  --color-popover-foreground: #FFFFFF; /* pure-white */
 
-  --color-border: rgba(201, 168, 76, 0.3);  /* gold border muted */
-  --color-input: #1E3A9E;             /* dark blue input */
-  --color-ring: #C9A84C;              /* gold ring */
+  --color-primary: #FBC33B;           /* forkful-gold */
+  --color-primary-foreground: #061538; /* deep-navy text on gold buttons */
 
-  --color-success: #10B981;           /* emerald-500 */
-  --color-success-foreground: #FFFFFF; /* white */
+  --color-secondary: #9FB5F5;         /* muted-periwinkle */
+  --color-secondary-foreground: #061538;
 
-  --color-warning: #C9A84C;           /* gold for pending */
-  --color-warning-foreground: #0F1A5C; /* deep blue */
+  --color-accent: #FBC33B;            /* forkful-gold */
+  --color-accent-foreground: #061538;
 
-  --color-error: #F87171;             /* red-400 */
-  --color-error-foreground: #FFFFFF;  /* white */
+  --color-muted: #0A2463;             /* royal-navy */
+  --color-muted-foreground: #9FB5F5;  /* muted-periwinkle */
 
-  --color-destructive: #F87171;       /* red-400 */
-  --color-destructive-foreground: #FFFFFF; /* white */
+  --color-border: #1D4ED8;            /* blue-border */
+  --color-input: #081C49;             /* dark-input */
+  --color-ring: #FBC33B;              /* forkful-gold */
+
+  --color-success: #10D6A0;           /* success-green */
+  --color-success-foreground: #FFFFFF;
+
+  --color-warning: #FBBF24;           /* warning-amber */
+  --color-warning-foreground: #061538;
+
+  --color-error: #FF4D5E;             /* danger-red */
+  --color-error-foreground: #FFFFFF;
+
+  --color-destructive: #FF4D5E;       /* danger-red */
+  --color-destructive-foreground: #FFFFFF;
 
   /* Typography */
   --font-heading: 'Inter', 'Source Sans 3', system-ui, sans-serif;
@@ -54,11 +80,11 @@
   --font-data: 'JetBrains Mono', monospace;
 
   /* Shadows - gold tinted */
-  --shadow-sm: 0 2px 4px rgba(201, 168, 76, 0.15);
-  --shadow-md: 0 4px 12px rgba(201, 168, 76, 0.20);
-  --shadow-lg: 0 8px 24px rgba(201, 168, 76, 0.25);
-  --shadow-xl: 0 12px 32px rgba(201, 168, 76, 0.30);
-  --shadow-2xl: 0 25px 50px -12px rgba(201, 168, 76, 0.35);
+  --shadow-sm: 0 2px 4px rgba(251, 195, 59, 0.12);
+  --shadow-md: 0 4px 12px rgba(251, 195, 59, 0.16);
+  --shadow-lg: 0 8px 24px rgba(251, 195, 59, 0.20);
+  --shadow-xl: 0 12px 32px rgba(251, 195, 59, 0.25);
+  --shadow-2xl: 0 25px 50px -12px rgba(251, 195, 59, 0.30);
 
   /* Border Radius */
   --radius-sm: 6px;
@@ -79,36 +105,31 @@
 }
 
 .dark {
-  --color-background: #0F1A5C;
+  --color-background: #061538;
   --color-foreground: #FFFFFF;
-  --color-card: #1B2A8B;
-  --color-card-foreground: #FFFFFF;
-  --color-popover: #1E3A9E;
+  --color-card: #0D2F83;
+  --color-card-foreground: #DCE6FF;
+  --color-popover: #0A2463;
   --color-popover-foreground: #FFFFFF;
-  --color-primary: #C9A84C;
-  --color-primary-foreground: #0F1A5C;
-  --color-secondary: #9BA4E8;
-  --color-secondary-foreground: #0F1A5C;
-  --color-accent: #C9A84C;
-  --color-accent-foreground: #0F1A5C;
-  --color-muted: #1E3A9E;
-  --color-muted-foreground: #9BA4E8;
-  --color-border: rgba(201, 168, 76, 0.3);
-  --color-input: #1E3A9E;
-  --color-ring: #C9A84C;
-  --color-success: #10B981;
+  --color-primary: #FBC33B;
+  --color-primary-foreground: #061538;
+  --color-secondary: #9FB5F5;
+  --color-secondary-foreground: #061538;
+  --color-accent: #FBC33B;
+  --color-accent-foreground: #061538;
+  --color-muted: #0A2463;
+  --color-muted-foreground: #9FB5F5;
+  --color-border: #1D4ED8;
+  --color-input: #081C49;
+  --color-ring: #FBC33B;
+  --color-success: #10D6A0;
   --color-success-foreground: #FFFFFF;
-  --color-warning: #C9A84C;
-  --color-warning-foreground: #0F1A5C;
-  --color-error: #F87171;
+  --color-warning: #FBBF24;
+  --color-warning-foreground: #061538;
+  --color-error: #FF4D5E;
   --color-error-foreground: #FFFFFF;
-  --color-destructive: #F87171;
+  --color-destructive: #FF4D5E;
   --color-destructive-foreground: #FFFFFF;
-  --shadow-sm: 0 2px 4px rgba(201, 168, 76, 0.15);
-  --shadow-md: 0 4px 12px rgba(201, 168, 76, 0.20);
-  --shadow-lg: 0 8px 24px rgba(201, 168, 76, 0.25);
-  --shadow-xl: 0 12px 32px rgba(201, 168, 76, 0.30);
-  --shadow-2xl: 0 25px 50px -12px rgba(201, 168, 76, 0.35);
 }
 
 /* Base Styles */

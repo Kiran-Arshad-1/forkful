@@ -8,61 +8,82 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: 'var(--color-background)',       // warm-cream / near-black warm
-        foreground: 'var(--color-foreground)',       // gray-800 / warm-white
+        // ForkFul Brand Palette Tokens
+        'deep-navy': '#061538',
+        'royal-navy': '#0A2463',
+        'royal-blue': '#0D2F83',
+        'bright-navy': '#123B96',
+        'forkful-gold': '#FBC33B',
+        'pure-white': '#FFFFFF',
+        'soft-white': '#DCE6FF',
+        'muted-periwinkle': '#9FB5F5',
+        'muted-blue': '#647DBA',
+        'blue-border': '#1D4ED8',
+        'subtle-border': '#254477',
+        'dark-input': '#081C49',
+        'hover-blue': '#17439B',
+        'gold-tint': '#3C351E',
+        'success-green': '#10D6A0',
+        'warning-amber': '#FBBF24',
+        'danger-red': '#FF4D5E',
+        'info-blue': '#6385FF',
+
+        // Semantic CSS Variable Mappings
+        background: 'var(--color-background)',
+        foreground: 'var(--color-foreground)',
 
         card: {
-          DEFAULT: 'var(--color-card)',              // white / dark warm surface
-          foreground: 'var(--color-card-foreground)', // gray-800 / warm-white
+          DEFAULT: 'var(--color-card)',
+          foreground: 'var(--color-card-foreground)',
         },
 
         popover: {
-          DEFAULT: 'var(--color-popover)',           // white / dark warm elevated
-          foreground: 'var(--color-popover-foreground)', // gray-800 / warm-white
+          DEFAULT: 'var(--color-popover)',
+          foreground: 'var(--color-popover-foreground)',
         },
 
         primary: {
-          DEFAULT: 'var(--color-primary)',           // amber-600 / amber-400
-          foreground: 'var(--color-primary-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-primary)',
+          foreground: 'var(--color-primary-foreground)',
         },
 
         secondary: {
-          DEFAULT: 'var(--color-secondary)',         // emerald-600 / emerald-400
-          foreground: 'var(--color-secondary-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-secondary)',
+          foreground: 'var(--color-secondary-foreground)',
         },
 
         accent: {
-          DEFAULT: 'var(--color-accent)',            // red-600 / red-400
-          foreground: 'var(--color-accent-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-accent)',
+          foreground: 'var(--color-accent-foreground)',
         },
 
         muted: {
-          DEFAULT: 'var(--color-muted)',             // warm-gray-100 / dark warm muted
-          foreground: 'var(--color-muted-foreground)', // gray-500 / gray-400
+          DEFAULT: 'var(--color-muted)',
+          foreground: 'var(--color-muted-foreground)',
         },
 
-        border: 'var(--color-border)',               // stone-200 / dark warm border
-        input: 'var(--color-input)',                 // stone-200 / dark warm input
-        ring: 'var(--color-ring)',                   // amber-600 / amber-400
+        border: 'var(--color-border)',
+        input: 'var(--color-input)',
+        ring: 'var(--color-ring)',
 
         success: {
-          DEFAULT: 'var(--color-success)',           // emerald-500 / emerald-400
-          foreground: 'var(--color-success-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-success)',
+          foreground: 'var(--color-success-foreground)',
         },
 
         warning: {
-          DEFAULT: 'var(--color-warning)',           // amber-400 / amber-300
-          foreground: 'var(--color-warning-foreground)', // gray-800
+          DEFAULT: 'var(--color-warning)',
+          foreground: 'var(--color-warning-foreground)',
         },
 
         error: {
-          DEFAULT: 'var(--color-error)',             // red-500 / red-400
-          foreground: 'var(--color-error-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-error)',
+          foreground: 'var(--color-error-foreground)',
         },
 
         destructive: {
-          DEFAULT: 'var(--color-destructive)',       // red-500 / red-400
-          foreground: 'var(--color-destructive-foreground)', // white / gray-800
+          DEFAULT: 'var(--color-destructive)',
+          foreground: 'var(--color-destructive-foreground)',
         },
       },
 

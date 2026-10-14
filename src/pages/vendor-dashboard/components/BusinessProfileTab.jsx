@@ -395,26 +395,27 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
           <BusinessDropdown />
         ) : (
           <div
-            className="flex flex-col items-center justify-center text-center p-8 md:p-12 rounded-xl"
-            style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}
+            className="flex flex-col items-center justify-center text-center p-8 md:p-12 rounded-2xl"
+            style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}
           >
-            <img
-              src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRTV19XC6HjhO6G6fZmMZ5oPcOEqRjfMwqAtw&s" /* Replace with your actual image path */
-              alt="No Business Yet"
-              className="w-48 h-48 mb-6 object-contain opacity-90"
-            />
-            <h2 className="font-heading text-xl md:text-2xl font-bold mb-2" style={{ color: '#FFFFFF' }}>
+            <div
+              className="w-20 h-20 rounded-3xl flex items-center justify-center mb-6 shadow-xl"
+              style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+            >
+              <Icon name="Store" size={40} color="#FBC33B" />
+            </div>
+            <h2 className="font-heading text-xl md:text-2xl font-bold mb-2 text-white">
               You don't have a business yet
             </h2>
-            <p className="text-sm mb-8 max-w-md" style={{ color: '#9BA4E8' }}>
+            <p className="text-sm mb-8 max-w-md" style={{ color: '#DCE6FF' }}>
               Create your business profile to get listed on ForkFul and start reaching new customers today.
             </p>
             <button
               onClick={() => setIsCreatingBusiness(true)}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg font-bold text-sm transition-all duration-250 hover:opacity-90 hover:-translate-y-0.5 shadow-lg"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
+              style={{ background: '#FBC33B', color: '#061538' }}
             >
-              <Icon name="Plus" size={18} color="#0F1A5C" />
+              <Icon name="Plus" size={18} color="#061538" strokeWidth={2.5} />
               Add New Business
             </button>
           </div>

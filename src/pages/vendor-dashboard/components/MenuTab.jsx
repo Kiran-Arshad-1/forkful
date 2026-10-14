@@ -1,12 +1,31 @@
-import React, { useReducer, useEffect } from 'react';
+import React, { useReducer, useEffect, useState, useMemo } from 'react';
 import Icon from 'components/AppIcon';
-import Input from 'components/ui/Input';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
 import { MenuSkeleton } from 'components/ui/Shimmer';
 import * as svc from '../../../services/vendorProfileService';
 
-const emptyForm = { name: '', description: '', price: '', is_available: true, images: [] };
+import MenuHeroHeader from './menu/MenuHeroHeader';
+import MenuHorizontalFilter from './menu/MenuHorizontalFilter';
+import MenuSidebarFilters from './menu/MenuSidebarFilters';
+import MenuItemCard from './menu/MenuItemCard';
+import MenuItemForm from './menu/MenuItemForm';
+
+const DEFAULT_CATEGORIES = [
+  { key: 'appetizer', label: 'Appetizers' },
+  { key: 'main_course', label: 'Main Course' },
+  { key: 'dessert', label: 'Desserts' },
+  { key: 'beverage', label: 'Drinks' },
+];
+
+const emptyForm = {
+  name: '',
+  category: '',
+  description: '',
+  price: '',
+  is_available: true,
+  images: [],
+};
 
 const init = {
   tabLoading: true,
@@ -15,7 +34,6 @@ const init = {
   formValues: emptyForm,
   formErrors: {},
   saving: false,
-  deleteConfirm: null,
 };
 
 const reducer = (s, a) => {
@@ -29,24 +47,28 @@ const reducer = (s, a) => {
       if (Array.isArray(a.item.images)) {
         existingImages.push(...a.item.images);
       } else if (Array.isArray(a.item.image_url)) {
-        a.item.image_url.forEach((url, idx) => {
+        a.item.image_url.filter(Boolean).forEach((url, idx) => {
           existingImages.push({
             id: `existing-${idx}`,
             url,
             path: a.item.image_path?.[idx] || '',
-            isExisting: true
+            isExisting: true,
           });
         });
       }
       return {
-        ...s, showForm: true, editingId: a.item.id, formErrors: {},
+        ...s,
+        showForm: true,
+        editingId: a.item.id,
+        formErrors: {},
         formValues: {
-          name: a.item.name,
+          name: a.item.name || '',
+          category: a.item.category ?? '',
           description: a.item.description ?? '',
           price: String(a.item.price ?? ''),
           is_available: a.item.is_available ?? true,
-          images: existingImages
-        }
+          images: existingImages,
+        },
       };
     case 'FORM_CLOSE':
       return { ...s, showForm: false, editingId: null, formValues: emptyForm, formErrors: {}, saving: false };
@@ -64,21 +86,16 @@ const reducer = (s, a) => {
       return { ...s, showForm: false, editingId: null, formValues: emptyForm, formErrors: {}, saving: false };
     case 'SAVE_FAIL':
       return { ...s, saving: false };
-    case 'DELETE_ASK':
-      return { ...s, deleteConfirm: a.id };
-    case 'DELETE_CANCEL':
-      return { ...s, deleteConfirm: null };
     default:
       return s;
   }
 };
 
-const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
+const MenuTab = ({ isOnboarding, onPrev, onNext, onBackToBusinesses }) => {
   const { user } = useAuthStore();
   const {
     profile,
     menuItems: storeItems,
-    fetchProfile,
     fetchMenuItems,
     addMenuItem,
     updateMenuItem,
@@ -86,13 +103,24 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
     draftMenuItems,
     setDraftMenuItems,
     selectedBusinessId,
+    vendor_business,
+    reviews,
   } = useVendorProfileStore();
 
   const items = isOnboarding ? draftMenuItems : storeItems;
 
   const [state, dispatch] = useReducer(reducer, init);
-  const { tabLoading, showForm, editingId, formValues, formErrors, saving, deleteConfirm } = state;
+  const { tabLoading, showForm, editingId, formValues, formErrors, saving } = state;
 
+  // ── Filters & Controls State ──────────────────────────────────────────────────
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedAvailability, setSelectedAvailability] = useState('all');
+  const [selectedPriceRange, setSelectedPriceRange] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Fetch items for selected business
   useEffect(() => {
     if (isOnboarding) {
       dispatch({ type: 'LOADED' });
@@ -105,42 +133,176 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
     fetchMenuItems(selectedBusinessId).finally(() => dispatch({ type: 'LOADED' }));
   }, [selectedBusinessId, isOnboarding]);
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
-    addImages(files);
-    e.target.value = '';
+  // Current business details from vendors_businesses table
+  const selectedBusiness = Array.isArray(vendor_business)
+    ? vendor_business.find((b) => b.id === selectedBusinessId) || vendor_business[0]
+    : null;
+
+  // Dynamic Item Counts
+  const totalItems = items?.length || 0;
+  const availableItems = items?.filter((i) => i.is_available !== false).length || 0;
+  const outOfStockItems = items?.filter((i) => i.is_available === false).length || 0;
+
+  // Dynamic categories from real database items (NO dummy categories)
+  const dynamicCategories = useMemo(() => {
+    if (!items || items.length === 0) return DEFAULT_CATEGORIES;
+
+    const map = new Map();
+    DEFAULT_CATEGORIES.forEach((c) => map.set(c.key.toLowerCase(), c.label));
+
+    items.forEach((it) => {
+      if (it.category?.trim()) {
+        const raw = it.category.trim();
+        const key = raw.toLowerCase();
+        if (!map.has(key)) {
+          const label = raw.replace(/[_-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          map.set(key, label);
+        }
+      }
+    });
+
+    // const activeList = [];
+    // map.forEach((label, key) => {
+    //   const count = items.filter((it) => {
+    //     if (!it.category) return false;
+    //     const itKey = it.category.toLowerCase().trim();
+    //     if (key === 'beverage' && (itKey === 'drinks' || itKey === 'drink' || itKey === 'beverages')) return true;
+    //     return itKey === key;
+    //   }).length;
+    //   if (count > 0) {
+    //     activeList.push({ key, label });
+    //   }
+    // });
+
+    return DEFAULT_CATEGORIES;
+  }, [items]);
+
+  // Category counts computed strictly from actual items
+  const categoryCounts = useMemo(() => {
+    const counts = { all: totalItems };
+    dynamicCategories.forEach((cat) => {
+      counts[cat.key] = (items || []).filter((i) => {
+        if (!i.category) return false;
+        const itKey = i.category.toLowerCase().trim();
+        if (cat.key === 'beverage' && (itKey === 'drinks' || itKey === 'drink' || itKey === 'beverages')) return true;
+        return itKey === cat.key;
+      }).length;
+    });
+    return counts;
+  }, [items, totalItems, dynamicCategories]);
+
+  // Price range counts strictly from database items
+  const priceRangeCounts = useMemo(() => {
+    return {
+      under_10: (items || []).filter((i) => parseFloat(i.price || 0) < 10).length,
+      from_10_20: (items || []).filter((i) => {
+        const p = parseFloat(i.price || 0);
+        return p >= 10 && p <= 20;
+      }).length,
+      from_20_30: (items || []).filter((i) => {
+        const p = parseFloat(i.price || 0);
+        return p > 20 && p <= 30;
+      }).length,
+      above_30: (items || []).filter((i) => parseFloat(i.price || 0) > 30).length,
+    };
+  }, [items]);
+
+  // Filtered Items strictly using actual database fields
+  const filteredItems = useMemo(() => {
+    return (items || []).filter((item) => {
+      // 1. Search Query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const matchName = item.name?.toLowerCase().includes(q);
+        const matchDesc = item.description?.toLowerCase().includes(q);
+        if (!matchName && !matchDesc) return false;
+      }
+
+      // 2. Category Filter
+      if (selectedCategory !== 'all') {
+        if (!item.category) return false;
+        const itKey = item.category.toLowerCase().trim();
+        if (selectedCategory === 'beverage') {
+          if (itKey !== 'beverage' && itKey !== 'drinks' && itKey !== 'drink' && itKey !== 'beverages') {
+            return false;
+          }
+        } else if (itKey !== selectedCategory) {
+          return false;
+        }
+      }
+
+      // 3. Availability Filter
+      if (selectedAvailability === 'available' && item.is_available === false) return false;
+      if (selectedAvailability === 'out_of_stock' && item.is_available !== false) return false;
+
+      // 4. Price Range Filter
+      const price = parseFloat(item.price || 0);
+      if (selectedPriceRange === 'under_10' && price >= 10) return false;
+      if (selectedPriceRange === '10_20' && (price < 10 || price > 20)) return false;
+      if (selectedPriceRange === '20_30' && (price < 20 || price > 30)) return false;
+      if (selectedPriceRange === '30_plus' && price <= 30) return false;
+
+      return true;
+    });
+  }, [items, searchQuery, selectedCategory, selectedAvailability, selectedPriceRange]);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────────
+  const handleClearFilters = () => {
+    setSelectedCategory('all');
+    setSelectedAvailability('all');
+    setSelectedPriceRange('all');
+    setSearchQuery('');
   };
 
-  const addImages = (files) => {
+  const handleToggleAvailability = async (item) => {
+    const nextState = !item.is_available;
+    if (isOnboarding) {
+      setDraftMenuItems(
+        draftMenuItems.map((i) => (i.id === item.id ? { ...i, is_available: nextState } : i))
+      );
+    } else {
+      await updateMenuItem(item.id, { is_available: nextState });
+    }
+  };
+
+  const handleAddImages = (files) => {
     const currentImages = formValues.images || [];
     if (currentImages.length + files.length > 3) {
-      dispatch({ type: 'FORM_ERRORS', errors: { ...formErrors, images: 'You can upload a maximum of 3 images.' } });
+      dispatch({
+        type: 'FORM_ERRORS',
+        errors: { ...formErrors, images: 'You can upload a maximum of 3 images.' },
+      });
       return;
     }
-    const newEntries = files.map(file => ({
+    const newEntries = files.map((file) => ({
       id: `${Date.now()}-${Math.random()}`,
       file,
       preview: URL.createObjectURL(file),
-      isNew: true
+      isNew: true,
     }));
     dispatch({ type: 'FORM_FIELD', field: 'images', value: [...currentImages, ...newEntries] });
   };
 
-  const removeImage = (id) => {
+  const handleRemoveImage = (id) => {
     const currentImages = formValues.images || [];
-    dispatch({ type: 'FORM_FIELD', field: 'images', value: currentImages.filter(img => img.id !== id) });
+    dispatch({
+      type: 'FORM_FIELD',
+      field: 'images',
+      value: currentImages.filter((img) => img.id !== id),
+    });
   };
 
   const validate = () => {
     const errors = {};
     if (!formValues.name?.trim()) errors.name = 'Item name is required';
+    if (!formValues.category?.trim()) errors.category = 'Menu item category is required';
     if (!formValues.price?.trim()) errors.price = 'Price is required';
-    else if (isNaN(parseFloat(formValues.price)) || parseFloat(formValues.price) < 0) errors.price = 'Enter a valid price';
+    else if (isNaN(parseFloat(formValues.price)) || parseFloat(formValues.price) < 0) {
+      errors.price = 'Enter a valid price';
+    }
 
     const imgCount = formValues.images?.length || 0;
-    if (imgCount < 1) {
-      errors.images = 'Please upload at least 1 image.';
-    } else if (imgCount > 3) {
+    if (imgCount > 3) {
       errors.images = 'Maximum 3 images allowed.';
     }
     return errors;
@@ -148,32 +310,41 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
 
   const handleSave = async () => {
     const errors = validate();
-    if (Object.keys(errors).length > 0) { dispatch({ type: 'FORM_ERRORS', errors }); return; }
+    if (Object.keys(errors).length > 0) {
+      dispatch({ type: 'FORM_ERRORS', errors });
+      return;
+    }
     dispatch({ type: 'SAVE_START' });
     try {
       if (isOnboarding) {
         if (editingId) {
           setDraftMenuItems(
-            draftMenuItems.map(item => item.id === editingId ? {
-              ...item,
-              name: formValues.name,
-              description: formValues.description,
-              price: parseFloat(formValues.price),
-              is_available: formValues.is_available,
-              images: formValues.images,
-            } : item)
+            draftMenuItems.map((item) =>
+              item.id === editingId
+                ? {
+                  ...item,
+                  name: formValues.name.trim(),
+                  category: formValues.category.trim(),
+                  description: formValues.description?.trim() || null,
+                  price: parseFloat(formValues.price),
+                  is_available: formValues.is_available,
+                  images: formValues.images,
+                }
+                : item
+            )
           );
         } else {
           setDraftMenuItems([
             ...draftMenuItems,
             {
               id: `draft-${Date.now()}`,
-              name: formValues.name,
-              description: formValues.description,
+              name: formValues.name.trim(),
+              category: formValues.category.trim(),
+              description: formValues.description?.trim() || null,
               price: parseFloat(formValues.price),
               is_available: formValues.is_available,
               images: formValues.images,
-            }
+            },
           ]);
         }
         dispatch({ type: 'SAVE_DONE' });
@@ -184,17 +355,17 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
       if (!vendorId) throw new Error('Vendor ID not found');
 
       // 1. Identify deleted existing images
-      const initialItem = items.find(item => item.id === editingId);
+      const initialItem = items.find((item) => item.id === editingId);
       const initialPaths = initialItem?.image_path || [];
-      const remainingPaths = formValues.images.filter(img => img.isExisting).map(img => img.path);
-      const deletedPaths = initialPaths.filter(p => !remainingPaths.includes(p));
+      const remainingPaths = formValues.images.filter((img) => img.isExisting).map((img) => img.path);
+      const deletedPaths = initialPaths.filter((p) => !remainingPaths.includes(p));
 
       // 2. Perform deletions from storage
       for (const path of deletedPaths) {
         await svc.deleteMenuItemPhoto(path);
       }
 
-      // 3. Perform uploads for new files and collect final urls/paths
+      // 3. Perform uploads for new files
       const uploadedUrls = [];
       const uploadedPaths = [];
 
@@ -209,11 +380,12 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
         }
       }
 
-      // 4. Save to store or database
+      // 4. Save to database using exact menu_items table schema
       if (editingId) {
         await updateMenuItem(editingId, {
-          name: formValues.name,
-          description: formValues.description,
+          name: formValues.name.trim(),
+          category: formValues.category.trim(),
+          description: formValues.description?.trim() || null,
           price: parseFloat(formValues.price),
           is_available: formValues.is_available,
           image_url: uploadedUrls,
@@ -221,8 +393,9 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
         });
       } else {
         await addMenuItem({
-          name: formValues.name,
-          description: formValues.description,
+          name: formValues.name.trim(),
+          category: formValues.category.trim(),
+          description: formValues.description?.trim() || null,
           price: parseFloat(formValues.price),
           is_available: formValues.is_available,
           image_url: uploadedUrls,
@@ -237,359 +410,246 @@ const MenuTab = ({ isOnboarding, onPrev, onNext }) => {
   };
 
   const handleDelete = async (id) => {
-    ('now inside handle delete ');
-
     if (isOnboarding) {
-      setDraftMenuItems(draftMenuItems.filter(item => item.id !== id));
+      setDraftMenuItems(draftMenuItems.filter((item) => item.id !== id));
     } else {
-      ('now inside handle delete else ');
       await deleteMenuItem(id);
     }
-    dispatch({ type: 'DELETE_CANCEL' });
   };
 
   if (tabLoading) return <MenuSkeleton />;
 
-  return (
-    <div className="w-full space-y-4 lg:space-y-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-heading text-lg font-semibold" style={{ color: '#FFFFFF' }}>Menu Items</h3>
-          <p className="text-xs mt-0.5" style={{ color: '#9BA4E8' }}>
-            {items?.length} item{items?.length !== 1 ? 's' : ''} on your menu
-          </p>
+  // Zero-business state (If vendor has no restaurants yet)
+  if (!isOnboarding && (!Array.isArray(vendor_business) || vendor_business.length === 0)) {
+    return (
+      <div
+        className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
+        style={{
+          background: '#0D2F83',
+          border: '1px solid #1D4ED8',
+          minHeight: '340px',
+        }}
+      >
+        <div
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+          style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+        >
+          <Icon name="Store" size={28} color="#FBC33B" />
         </div>
-        {!showForm && (
-          <button
-            onClick={() => dispatch({ type: 'FORM_ADD' })}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
-          >
-            <Icon name="Plus" size={16} color="#0F1A5C" />
-            Add Item
-          </button>
-        )}
+        <h3 className="text-xl font-bold text-white mb-2">No Restaurant Found</h3>
+        <p className="text-xs sm:text-sm max-w-md mb-6" style={{ color: '#DCE6FF' }}>
+          Please create a restaurant business first. Once created, you will be able to add and manage your menu items here.
+        </p>
+        <button
+          onClick={onBackToBusinesses}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all"
+          style={{ background: '#FBC33B', color: '#061538' }}
+        >
+          <Icon name="Plus" size={15} color="#061538" strokeWidth={2.5} />
+          <span>Create Business</span>
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full space-y-6 lg:space-y-8">
+      {/* ── 1. Hero Header Banner (Real data only, no dummy images or stats) ── */}
+      <MenuHeroHeader
+        business={selectedBusiness}
+        totalItems={totalItems}
+        availableItems={availableItems}
+        outOfStockItems={outOfStockItems}
+        reviews={reviews || []}
+        onBackToBusinesses={onBackToBusinesses}
+        onAddItem={() => dispatch({ type: 'FORM_ADD' })}
+        onEditMenu={() => {
+          const el = document.getElementById('menu-items-grid-section');
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }}
+      />
+
+      {/* ── 2. Horizontal Filter Bar ── */}
+      <div id="menu-items-grid-section" className="pt-2">
+        <MenuHorizontalFilter
+          categories={dynamicCategories}
+          selectedCategory={selectedCategory}
+          onSelectCategory={setSelectedCategory}
+          categoryCounts={categoryCounts}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          viewMode={viewMode}
+          onToggleViewMode={setViewMode}
+          onToggleFilterDrawer={() => setShowMobileFilters(!showMobileFilters)}
+        />
       </div>
 
-      {/* Add / Edit Form */}
-      {showForm && (
-        <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-          <h4 className="font-heading text-base font-semibold mb-4" style={{ color: '#FFFFFF' }}>
-            {editingId ? 'Edit Menu Item' : 'New Menu Item'}
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <Input
-                label="Item Name"
-                type="text"
-                value={formValues.name}
-                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'name', value: e.target.value })}
-                placeholder="e.g. Jerk Chicken Platter"
-                error={formErrors.name}
-                required
-              />
-            </div>
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>Description</label>
-              <textarea
-                value={formValues.description}
-                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'description', value: e.target.value })}
-                placeholder="Describe the dish, ingredients, serving size..."
-                rows={3}
-                className="w-full px-3 py-2 text-sm rounded-lg resize-none outline-none transition-all duration-250"
-                style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
-              />
-            </div>
-            <div>
-              <Input
-                label="Price (BDS$)"
-                type="number"
-                value={formValues.price}
-                onChange={e => dispatch({ type: 'FORM_FIELD', field: 'price', value: e.target.value })}
-                placeholder="0.00"
-                error={formErrors.price}
-                required
-              />
-            </div>
-            <div className="flex flex-col justify-end pb-1.5">
-              <span className="block text-sm font-medium mb-2" style={{ color: '#FFFFFF' }}>Menu Item Status</span>
-              <div className="flex items-center gap-3 h-[42px]">
+      {/* ── 3. Main 2-Column Layout: Sidebar Filters + Cards Grid ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Sidebar Filter Column (Desktop) */}
+        <div className="hidden lg:block lg:col-span-3">
+          <MenuSidebarFilters
+            categories={dynamicCategories}
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+            categoryCounts={categoryCounts}
+            selectedAvailability={selectedAvailability}
+            onSelectAvailability={setSelectedAvailability}
+            availabilityCounts={{
+              all: totalItems,
+              available: availableItems,
+              outOfStock: outOfStockItems,
+            }}
+            selectedPriceRange={selectedPriceRange}
+            onSelectPriceRange={setSelectedPriceRange}
+            priceRangeCounts={priceRangeCounts}
+            onClearAll={handleClearFilters}
+          />
+        </div>
+
+        {/* Mobile Filter Drawer (when toggled on small screens) */}
+        {showMobileFilters && (
+          <div className="lg:hidden col-span-12">
+            <MenuSidebarFilters
+              categories={dynamicCategories}
+              selectedCategory={selectedCategory}
+              onSelectCategory={(cat) => {
+                setSelectedCategory(cat);
+                setShowMobileFilters(false);
+              }}
+              categoryCounts={categoryCounts}
+              selectedAvailability={selectedAvailability}
+              onSelectAvailability={(av) => {
+                setSelectedAvailability(av);
+                setShowMobileFilters(false);
+              }}
+              availabilityCounts={{
+                all: totalItems,
+                available: availableItems,
+                outOfStock: outOfStockItems,
+              }}
+              selectedPriceRange={selectedPriceRange}
+              onSelectPriceRange={(pr) => {
+                setSelectedPriceRange(pr);
+                setShowMobileFilters(false);
+              }}
+              priceRangeCounts={priceRangeCounts}
+              onClearAll={handleClearFilters}
+            />
+          </div>
+        )}
+
+        {/* Right Cards Area */}
+        <div className="col-span-12 lg:col-span-9 space-y-4">
+          {/* Empty State */}
+          {filteredItems.length === 0 ? (
+            <div
+              className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-inner"
+              style={{
+                background: '#0D2F83', // Royal Blue
+                border: '1px solid #1D4ED8',
+                minHeight: '340px',
+              }}
+            >
+              <div
+                className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+                style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+              >
+                <Icon name="UtensilsCrossed" size={28} color="#FBC33B" />
+              </div>
+
+              <h4 className="text-base sm:text-lg font-bold text-white mb-1">
+                {items.length === 0 ? 'No menu items yet' : 'No dishes match your filters'}
+              </h4>
+              <p className="text-xs sm:text-sm max-w-sm mb-6" style={{ color: '#DCE6FF' }}>
+                {items.length === 0
+                  ? 'Add your first dish to start building your restaurant’s menu.'
+                  : 'Try clearing your category, availability, or price filters to see more dishes.'}
+              </p>
+
+              {items.length === 0 ? (
                 <button
-                  type="button"
-                  onClick={() => dispatch({ type: 'FORM_FIELD', field: 'is_available', value: !formValues.is_available })}
-                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${formValues.is_available ? 'bg-[#C9A84C]' : 'bg-[#0F1A5C]'}`}
-                  style={{ border: '1px solid rgba(201,168,76,0.3)' }}
+                  onClick={() => dispatch({ type: 'FORM_ADD' })}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all"
+                  style={{ background: '#FBC33B', color: '#061538' }}
                 >
-                  <span
-                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${formValues.is_available ? 'translate-x-5' : 'translate-x-0'}`}
-                  />
+                  <Icon name="Plus" size={15} color="#061538" strokeWidth={2.5} />
+                  <span>Add First Item</span>
                 </button>
-                <span className="text-xs font-semibold" style={{ color: formValues.is_available ? '#10B981' : '#9BA4E8' }}>
-                  {formValues.is_available ? 'Active (Available)' : 'Inactive (Unavailable)'}
-                </span>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 mt-2">
-              <label className="block text-sm font-medium mb-1.5" style={{ color: '#FFFFFF' }}>
-                Menu Item Images <span style={{ color: '#F87171' }}>*</span> (1 to 3 images)
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 items-start">
-                {/* Upload Button Box */}
-                <div className="sm:col-span-1">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    id="menu-item-files"
-                    onChange={handleFileSelect}
-                    disabled={formValues.images?.length >= 3}
-                  />
-                  <label
-                    htmlFor="menu-item-files"
-                    className={`flex flex-col items-center justify-center h-28 rounded-lg cursor-pointer transition-all duration-200 text-center px-2 py-3 border-2 border-dashed ${formValues.images?.length >= 3
-                      ? 'opacity-40 cursor-not-allowed border-gray-600'
-                      : 'hover:bg-white/5 border-[rgba(201,168,76,0.35)]'
-                      }`}
-                    style={{ background: '#0F1A5C' }}
-                  >
-                    <Icon name="ImagePlus" size={24} color="#C9A84C" />
-                    <span className="text-[10px] font-semibold text-[#9BA4E8] mt-2 leading-tight">
-                      Add Menu Images
-                    </span>
-                    <span className="text-[9px] text-[#9BA4E8]/60 mt-1">
-                      {formValues.images?.length || 0} / 3 Uploaded
-                    </span>
-                  </label>
-                </div>
-
-                {/* Previews List */}
-                <div className="sm:col-span-3 grid grid-cols-3 gap-3">
-                  {formValues.images?.map((img) => (
-                    <div
-                      key={img.id}
-                      className="relative h-28 rounded-lg overflow-hidden group"
-                      style={{ border: '1px solid rgba(201,168,76,0.25)', background: '#0F1A5C' }}
-                    >
-                      <img
-                        src={img.isExisting ? img.url : img.preview}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                      {/* Overlay delete button */}
-                      <button
-                        type="button"
-                        onClick={() => removeImage(img.id)}
-                        className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/75 hover:bg-red-600 transition-colors flex items-center justify-center shadow-lg"
-                        style={{ color: '#FFFFFF' }}
-                        title="Remove image"
-                      >
-                        <Icon name="X" size={13} color="#FFFFFF" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {formErrors.images && (
-                <p className="text-xs mt-1.5 flex items-center gap-1" style={{ color: '#F87171' }}>
-                  <Icon name="AlertCircle" size={12} color="#F87171" />
-                  {formErrors.images}
-                </p>
+              ) : (
+                <button
+                  onClick={handleClearFilters}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-[#17439B] transition-all"
+                  style={{
+                    background: '#081C49',
+                    border: '1px solid #254477',
+                    color: '#FBC33B',
+                  }}
+                >
+                  <Icon name="RotateCcw" size={14} color="#FBC33B" />
+                  <span>Clear All Filters</span>
+                </button>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-3 mt-5">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 disabled:opacity-50"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
+          ) : (
+            /* Items List / Grid */
+            <div
+              className={
+                viewMode === 'grid'
+                  ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5'
+                  : 'flex flex-col gap-3'
+              }
             >
-              <Icon name={saving ? 'Loader2' : 'Check'} size={16} color="#0F1A5C" className={saving ? 'animate-spin' : ''} />
-              {saving ? 'Saving...' : editingId ? 'Update Item' : 'Add Item'}
-            </button>
-            <button
-              onClick={() => dispatch({ type: 'FORM_CLOSE' })}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 hover:bg-white/10"
-              style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
-            >
-              Cancel
-            </button>
-          </div>
+              {filteredItems.map((item) => (
+                <MenuItemCard
+                  key={item.id}
+                  item={item}
+                  viewMode={viewMode}
+                  onEdit={(it) => dispatch({ type: 'FORM_EDIT', item: it })}
+                  onDelete={handleDelete}
+                  onToggleAvailability={handleToggleAvailability}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
-      {/* Empty State */}
-      {items?.length === 0 && !showForm && (
-        <div
-          className="rounded-xl flex flex-col items-center justify-center py-16 px-6"
-          style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)', minHeight: '320px' }}
-        >
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}
-          >
-            <Icon name="UtensilsCrossed" size={28} color="#C9A84C" />
-          </div>
-          <p className="text-base font-semibold mb-1" style={{ color: '#FFFFFF' }}>No menu items yet</p>
-          <p className="text-sm mb-6 text-center" style={{ color: '#9BA4E8' }}>
-            Add your first dish to start building your menu
-          </p>
-          <button
-            onClick={() => dispatch({ type: 'FORM_ADD' })}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
-          >
-            <Icon name="Plus" size={16} color="#0F1A5C" />
-            Add First Item
-          </button>
-        </div>
-      )}
+      {/* ── 4. Add / Edit Menu Item Modal Form ── */}
+      <MenuItemForm
+        isOpen={showForm}
+        editingId={editingId}
+        formValues={formValues}
+        formErrors={formErrors}
+        saving={saving}
+        onChangeField={(field, value) => dispatch({ type: 'FORM_FIELD', field, value })}
+        onAddImages={handleAddImages}
+        onRemoveImage={handleRemoveImage}
+        onSave={handleSave}
+        onClose={() => dispatch({ type: 'FORM_CLOSE' })}
+      />
 
-      {/* Items List */}
-      {items?.length > 0 && (
-        <div className="w-full space-y-3">
-          {items?.map(item => {
-            const displayImages = Array.isArray(item.images)
-              ? item.images.map(img => img.isExisting ? img.url : (img.preview || ''))
-              : (Array.isArray(item.image_url) ? item.image_url : []);
-            return (
-              <div
-                key={item?.id}
-                className="w-full rounded-xl p-4 flex items-start gap-4 transition-all duration-200"
-                style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.2)' }}
-              >
-                {displayImages.length > 0 ? (
-                  <img
-                    src={displayImages[0]}
-                    alt={item?.name}
-                    className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
-                    style={{ border: '1px solid rgba(201,168,76,0.25)' }}
-                  />
-                ) : (
-                  <div
-                    className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                    style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.25)' }}
-                  >
-                    <Icon name="UtensilsCrossed" size={18} color="#C9A84C" />
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold truncate" style={{ color: '#FFFFFF' }}>{item?.name}</p>
-                    <span
-                      className={`inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full`}
-                      style={{
-                        background: item.is_available !== false ? 'rgba(16,185,129,0.1)' : 'rgba(248,113,113,0.1)',
-                        color: item.is_available !== false ? '#10B981' : '#F87171',
-                        border: item.is_available !== false ? '1px solid rgba(16,185,129,0.3)' : '1px solid rgba(248,113,113,0.3)',
-                      }}
-                    >
-                      {item.is_available !== false ? 'Active' : 'Inactive'}
-                    </span>
-                  </div>
-                  {item?.description && (
-                    <p className="text-xs mt-0.5 line-clamp-2" style={{ color: '#9BA4E8' }}>{item?.description}</p>
-                  )}
-                  {displayImages.length > 0 && (
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      {displayImages.map((url, index) => (
-                        <div
-                          key={index}
-                          className="relative w-12 h-12 rounded-md overflow-hidden group"
-                          style={{ border: '1px solid rgba(201,168,76,0.15)', background: '#0F1A5C' }}
-                        >
-                          <img
-                            src={url}
-                            alt={`${item?.name} ${index + 1}`}
-                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <span className="text-sm font-bold whitespace-nowrap flex-shrink-0" style={{ color: '#C9A84C' }}>
-                  BDS$ {parseFloat(item?.price ?? 0)?.toFixed(2)}
-                </span>
-
-                <div className="flex items-center gap-1 flex-shrink-0">
-                  <button
-                    onClick={() => dispatch({ type: 'FORM_EDIT', item })}
-                    className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
-                    style={{ color: '#9BA4E8' }}
-                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(201,168,76,0.15)'}
-                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    aria-label={`Edit ${item?.name}`}
-                  >
-                    <Icon name="Pencil" size={15} />
-                  </button>
-
-                  {deleteConfirm === item?.id ? (
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => handleDelete(item?.id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
-                        style={{ background: '#F87171', color: '#FFFFFF' }}
-                        aria-label="Confirm delete"
-                      >
-                        <Icon name="Check" size={14} color="#FFFFFF" />
-                      </button>
-                      <button
-                        onClick={() => dispatch({ type: 'DELETE_CANCEL' })}
-                        className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
-                        style={{ color: '#9BA4E8' }}
-                        onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
-                        onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                        aria-label="Cancel delete"
-                      >
-                        <Icon name="X" size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => dispatch({ type: 'DELETE_ASK', id: item?.id })}
-                      className="w-8 h-8 flex items-center justify-center rounded-md transition-all"
-                      style={{ color: '#9BA4E8' }}
-                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#F87171'; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9BA4E8'; }}
-                      aria-label={`Delete ${item?.name}`}
-                    >
-                      <Icon name="Trash2" size={15} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Wizard Footer Buttons */}
+      {/* ── 5. Wizard Footer Buttons (During Onboarding) ── */}
       {isOnboarding && (
-        <div className="flex items-center justify-between pt-6 mt-6" style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
+        <div
+          className="flex items-center justify-between pt-6 mt-6 border-t"
+          style={{ borderColor: '#254477' }}
+        >
           <button
             onClick={onPrev}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/10"
-            style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all"
+            style={{ border: '1px solid #254477', color: '#9FB5F5' }}
           >
-            <Icon name="ArrowLeft" size={16} color="#9BA4E8" />
-            Back
+            <Icon name="ArrowLeft" size={15} color="#9FB5F5" />
+            <span>Back</span>
           </button>
           <button
             onClick={onNext}
-            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all hover:opacity-90"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg"
+            style={{ background: '#FBC33B', color: '#061538' }}
           >
-            Next: Upload Photos
-            <Icon name="ArrowRight" size={16} color="#0F1A5C" />
+            <span>Next: Upload Photos</span>
+            <Icon name="ArrowRight" size={15} color="#061538" strokeWidth={2.5} />
           </button>
         </div>
       )}

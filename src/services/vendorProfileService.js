@@ -239,25 +239,127 @@ export async function fetchVendorId(userId) {
 
 // ─── Reviews (read-only for vendor) ──────────────────────────────────────────
 
-export async function fetchVendorReviews(vendorId) {
+const BUSINESS_REVIEW_SELECT = `
+  review_id,
+  user_id,
+  business_id,
+  user_name,
+  username,
+  rating,
+  comment,
+  created_at,
+  updated_at,
+  tags,
+  images_paths,
+  isFoodTrail,
+  owner_reply,
+  owner_reply_at,
+  helpful_count,
+  reviewer:users!business_reviews_user_id_fkey (
+    name,
+    username,
+    profile_photo_url
+  )
+`;
+
+export function getReviewImageUrl(path) {
+  if (!path || typeof path !== 'string') return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const cleanPath = path.replace(/^\/+/, '');
+  const knownBuckets = ['vendor', 'gallery-photos', 'profile-photos', 'trail-images', 'reviews', 'review-photos'];
+  const firstSlashIndex = cleanPath.indexOf('/');
+
+  if (firstSlashIndex !== -1) {
+    const potentialBucket = cleanPath.substring(0, firstSlashIndex);
+    if (knownBuckets.includes(potentialBucket)) {
+      const subPath = cleanPath.substring(firstSlashIndex + 1);
+      const { data } = supabase.storage.from(potentialBucket).getPublicUrl(subPath);
+      return data?.publicUrl || path;
+    }
+  }
+
+  const { data } = supabase.storage.from(BUSINESS_BUCKET).getPublicUrl(cleanPath);
+  return data?.publicUrl || path;
+}
+
+function normalizeBusinessReview(review) {
+  let images = [];
+  if (Array.isArray(review.images_paths)) {
+    images = review.images_paths;
+  } else if (typeof review.images_paths === 'string') {
+    try {
+      const parsed = JSON.parse(review.images_paths);
+      if (Array.isArray(parsed)) images = parsed;
+      else if (review.images_paths.trim()) images = [review.images_paths.trim()];
+    } catch {
+      if (review.images_paths.trim()) {
+        images = review.images_paths.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+    }
+  }
+
+  const resolvedImages = images.map((img) => getReviewImageUrl(img)).filter(Boolean);
+
+  return {
+    id: review.review_id,
+    business_id: review.business_id,
+    rating: review.rating,
+    review_text: review.comment,
+    tags: Array.isArray(review.tags) ? review.tags : [],
+    images_paths: resolvedImages,
+    created_at: review.created_at,
+    updated_at: review.updated_at,
+    isFoodTrail: review.isFoodTrail,
+    owner_reply: review.owner_reply,
+    owner_reply_at: review.owner_reply_at,
+    helpful_count: review.helpful_count,
+    username: review.username || review.reviewer?.username,
+    profiles: {
+      full_name: review.user_name || review.reviewer?.name,
+      avatar_url: review.reviewer?.profile_photo_url,
+    },
+  };
+}
+
+export async function fetchBusinessReviews(businessId) {
   const { data, error } = await supabase
-    .from('vendor_reviews')
-    .select(`
-      id,
-      rating, 
-      review_text,
-      tags,
-      created_at,
-      profiles:user_id (
-        full_name,
-        avatar_url
-      )
-    `)
-    .eq('vendor_id', vendorId)
+    .from('business_reviews')
+    .select(BUSINESS_REVIEW_SELECT)
+    .eq('business_id', businessId)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map(normalizeBusinessReview);
+}
+
+export async function updateBusinessReviewReply(reviewId, businessId, reply) {
+  const trimmed = typeof reply === 'string' ? reply.trim() : '';
+  const updatePayload = trimmed
+    ? {
+      owner_reply: trimmed,
+      owner_reply_at: new Date().toISOString(),
+    }
+    : {
+      owner_reply: null,
+      owner_reply_at: null,
+    };
+  const { data, error } = await supabase
+    .from('business_reviews')
+    .update(updatePayload)
+    .eq('review_id', reviewId)
+    .eq('business_id', businessId)
+    .select(BUSINESS_REVIEW_SELECT)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) {
+    throw new Error(
+      'No review row was updated. Verify the business_reviews UPDATE RLS policy for the signed-in business owner.',
+    );
+  }
+
+  return normalizeBusinessReview(data);
 }
 
 // ─── Gallery Photos ───────────────────────────────────────────────────────────
@@ -287,13 +389,25 @@ export const vendorBusinesses = async (ownerId) => {
 }
 
 
-function buildBusinessPhotoPath(ownerId, fileName, caption) {
+function buildBusinessPhotoPath(ownerId, fileName, caption, category = 'food') {
   const ext = fileName?.split('.').pop() || 'jpg';
   const baseName = caption?.trim()
     ? caption.trim()
     : (fileName?.replace(/\.[^/.]+$/, '') || 'photo');
   const safeBase = baseName.replace(/[^a-zA-Z0-9._-]/g, '_');
-  return `${ownerId}/${BUSINESS_PHOTO_PREFIX}/${Date.now()}-${safeBase}.${ext}`;
+  const validCategories = ['food', 'interior', 'staff', 'other'];
+  const cat = validCategories.includes(category?.toLowerCase()) ? category.toLowerCase() : 'food';
+  return `${ownerId}/${BUSINESS_PHOTO_PREFIX}/${cat}/${Date.now()}-${safeBase}.${ext}`;
+}
+
+export function detectPhotoCategory(pathOrUrl = '') {
+  if (!pathOrUrl) return 'other';
+  const lower = pathOrUrl.toLowerCase();
+  if (lower.includes('cat=food') || lower.includes('/food/') || lower.includes('/dishes/')) return 'food';
+  if (lower.includes('cat=interior') || lower.includes('/interior/') || lower.includes('/ambiance/')) return 'interior';
+  if (lower.includes('cat=staff') || lower.includes('/staff/') || lower.includes('/team/')) return 'staff';
+  if (lower.includes('cat=other') || lower.includes('/other/')) return 'other';
+  return 'food'; // Default fallback
 }
 
 export function getBusinessPhotoPublicUrl(path) {
@@ -302,18 +416,14 @@ export function getBusinessPhotoPublicUrl(path) {
 }
 
 export async function getBusinessPhotoSignedUrl(path, expiresIn = 3600) {
-  ('yahan aya to', path);
-
+  const cleanPath = path.split('?')[0];
   const { data, error } = await supabase.storage
     .from(BUSINESS_BUCKET)
-    .createSignedUrl(path, expiresIn);
+    .createSignedUrl(cleanPath, expiresIn);
   if (error) {
-    ('error in signed url fetch', error);
-
+    console.error('error in signed url fetch', error);
     throw error;
   }
-  ('getBusinessPhotoSignedUrl-->', data?.signedUrl);
-
   return data?.signedUrl || '';
 }
 
@@ -342,12 +452,13 @@ export async function saveBusinessImagePaths(ownerId, paths) {
 
 export function getBusinessPhotoPathFromUrl(url) {
   if (!url) return '';
+  const cleanUrl = url.split('?')[0];
   const marker = '/storage/v1/object/public/vendor/';
-  const index = url.indexOf(marker);
+  const index = cleanUrl.indexOf(marker);
   if (index !== -1) {
-    return url.substring(index + marker.length);
+    return cleanUrl.substring(index + marker.length);
   }
-  return url;
+  return cleanUrl;
 }
 
 export async function fetchBusinessImagePathsByBusiness(businessId) {
@@ -361,31 +472,31 @@ export async function fetchBusinessImagePathsByBusiness(businessId) {
   return data?.business_images_urls ?? [];
 }
 
-export async function uploadBusinessPhoto(file, ownerId, caption) {
-  ('Uploading business photo for ownerId', ownerId);
-  const path = buildBusinessPhotoPath(ownerId, file?.name, caption);
+export async function uploadBusinessPhoto(file, ownerId, caption, category = 'food') {
+  const path = buildBusinessPhotoPath(ownerId, file?.name, caption, category);
 
   const { error: storageError } = await supabase.storage
     .from(BUSINESS_BUCKET)
     .upload(path, file, { upsert: false, contentType: file.type });
 
   if (storageError) throw storageError;
-  ('Storage upload successful...');
   return { publicUrl: await getBusinessPhotoPublicUrl(path), path };
 }
 
-export async function uploadBusinessPhotoForBusiness(file, businessId, ownerId, caption) {
-  ('Uploading business photo for businessId', businessId);
-  const path = buildBusinessPhotoPath(ownerId, file?.name, caption);
+export async function uploadBusinessPhotoForBusiness(file, businessId, ownerId, caption, category = 'food') {
+  const validCategories = ['food', 'interior', 'staff', 'other'];
+  const cat = validCategories.includes(category?.toLowerCase()) ? category.toLowerCase() : 'food';
+  const path = buildBusinessPhotoPath(ownerId, file?.name, caption, cat);
 
   const { error: storageError } = await supabase.storage
     .from(BUSINESS_BUCKET)
     .upload(path, file, { upsert: false, contentType: file.type });
 
   if (storageError) throw storageError;
-  ('Storage upload successful, updating database paths...');
+
   const currentPaths = await fetchBusinessImagePathsByBusiness(businessId);
-  const publicUrl = getBusinessPhotoPublicUrl(path);
+  const basePublicUrl = getBusinessPhotoPublicUrl(path);
+  const publicUrl = `${basePublicUrl}?cat=${cat}`;
   const nextPaths = [...currentPaths, publicUrl];
 
   const { error } = await supabase
@@ -394,13 +505,14 @@ export async function uploadBusinessPhotoForBusiness(file, businessId, ownerId, 
     .eq('id', businessId);
 
   if (error) throw error;
-  return { publicUrl };
+  return { publicUrl, path, category: cat };
 }
 
 export async function deleteBusinessPhotoForBusiness(businessId, ownerId, storagePathOrUrl) {
-  const storagePath = storagePathOrUrl.startsWith('http')
-    ? getBusinessPhotoPathFromUrl(storagePathOrUrl)
-    : storagePathOrUrl;
+  const cleanUrl = storagePathOrUrl.split('?')[0];
+  const storagePath = cleanUrl.startsWith('http')
+    ? getBusinessPhotoPathFromUrl(cleanUrl)
+    : cleanUrl;
 
   if (storagePath) {
     const { error: storageError } = await supabase.storage
@@ -410,12 +522,10 @@ export async function deleteBusinessPhotoForBusiness(businessId, ownerId, storag
   }
 
   const currentPaths = await fetchBusinessImagePathsByBusiness(businessId);
-  // get publicurl from path
-  let pubUrlToRemove = getBusinessPhotoPublicUrl(storagePath);
-  ('now removing this path', pubUrlToRemove);
-
-  const nextPaths = currentPaths.filter((path) => path !== pubUrlToRemove);
-  ('next paths are these now', nextPaths);
+  const nextPaths = currentPaths.filter((path) => {
+    const pClean = path.split('?')[0];
+    return pClean !== cleanUrl && path !== storagePathOrUrl;
+  });
 
   const { error } = await supabase
     .from(BUSINESS_TABLE)
