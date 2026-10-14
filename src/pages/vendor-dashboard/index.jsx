@@ -164,6 +164,7 @@ const VendorDashboard = () => {
           isOnboarding={isOnboarding}
           onPrev={() => setActiveTab('menu')}
           onSubmitSuccess={() => setActiveTab('business-profile')}
+          onBackToBusinesses={() => setActiveTab('business-profile')}
         />
       </div>
       <div style={{ display: activeTab === 'billing' ? 'block' : 'none' }}>
@@ -173,7 +174,11 @@ const VendorDashboard = () => {
         <InsightsTab />
       </div>
       <div style={{ display: activeTab === 'reviews' ? 'block' : 'none' }}>
-        <ReviewsTab />
+        <ReviewsTab
+          onNavigateMenu={() => setActiveTab('menu')}
+          onNavigatePhotos={() => setActiveTab('photos')}
+          onBackToBusinesses={() => setActiveTab('business-profile')}
+        />
       </div>
     </>
   );

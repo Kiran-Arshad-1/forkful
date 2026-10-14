@@ -38,6 +38,7 @@ export default function BusinessDropdown() {
   }
 
   const isApproved = selectedBusiness?.status === 'active';
+  const isBlocked = selectedBusiness?.status === 'blocked';
 
   return (
     <div className="w-full space-y-6">

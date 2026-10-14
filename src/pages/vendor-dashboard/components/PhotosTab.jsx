@@ -1,52 +1,25 @@
-import React, { useReducer, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Icon from 'components/AppIcon';
-import Image from 'components/AppImage';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
 import { PhotosSkeleton } from 'components/ui/Shimmer';
-const STATUS_CONFIG = {
-  pending: { label: 'Pending Review', color: '#C9A84C', bg: 'rgba(201,168,76,0.15)' },
-  approved: { label: 'Approved', color: '#10B981', bg: 'rgba(16,185,129,0.15)' },
-  rejected: { label: 'Rejected', color: '#F87171', bg: 'rgba(248,113,113,0.15)' },
-  hidden: { label: 'Hidden', color: '#9BA4E8', bg: 'rgba(155,164,232,0.15)' },
-};
 
-const init = {
-  tabLoading: true,
-  dragging: false,
-  uploading: false,
-  uploadQueue: [],
-  uploadError: '',
-  deleteConfirm: null,
-  toast: null,
-};
+import PhotoHeroHeader from './photos/PhotoHeroHeader';
+import PhotoFilterBar from './photos/PhotoFilterBar';
+import PhotoCard from './photos/PhotoCard';
+import PhotoUploadModal from './photos/PhotoUploadModal';
+import PhotoLightboxModal from './photos/PhotoLightboxModal';
 
-const reducer = (s, a) => {
-  switch (a.type) {
-    case 'LOADED': return { ...s, tabLoading: false };
-    case 'DRAG': return { ...s, dragging: a.on };
-    case 'QUEUE_SET': return { ...s, uploadQueue: a.entries, uploadError: '' };
-    case 'QUEUE_CAPTION': return { ...s, uploadQueue: s.uploadQueue.map(e => e.id === a.id ? { ...e, caption: a.value } : e) };
-    case 'QUEUE_REMOVE': return { ...s, uploadQueue: s.uploadQueue.filter(e => e.id !== a.id) };
-    case 'QUEUE_CLEAR': return { ...s, uploadQueue: [], uploadError: '' };
-    case 'UPLOAD_START': return { ...s, uploading: true, uploadError: '' };
-    case 'UPLOAD_DONE': return { ...s, uploading: false, uploadQueue: [] };
-    case 'UPLOAD_FAIL': return { ...s, uploading: false, uploadError: a.msg };
-    case 'DELETE_ASK': return { ...s, deleteConfirm: a.id };
-    case 'DELETE_CANCEL': return { ...s, deleteConfirm: null };
-    case 'DELETE_DONE': return { ...s, deleteConfirm: null };
-    case 'TOAST': return { ...s, toast: a.toast };
-    default: return s;
-  }
-};
-
-const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
+const PhotosTab = ({
+  isOnboarding = false,
+  onPrev,
+  onSubmitSuccess,
+  onBackToBusinesses,
+}) => {
   const { user } = useAuthStore();
-
   const {
     profile,
-    photos,
-    fetchProfile,
+    photos: storePhotos,
     fetchGalleryPhotos,
     uploadPhoto,
     deletePhoto,
@@ -56,446 +29,378 @@ const PhotosTab = ({ isOnboarding, onPrev, onSubmitSuccess }) => {
     draftBusinessProfile,
     draftMenuItems,
     selectedBusinessId,
+    vendor_business,
   } = useVendorProfileStore();
-  const [state, dispatch] = useReducer(reducer, init);
-  const { tabLoading, dragging, uploading, uploadQueue, uploadError, deleteConfirm, toast } = state;
-  const fileInputRef = useRef(null);
 
-  const activeQueue = isOnboarding ? draftPhotos : uploadQueue;
+  const [tabLoading, setTabLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  const handleQueueCaption = (id, value) => {
+  // Lightbox State
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+
+  // Current active photos list
+  const photos = useMemo(() => {
     if (isOnboarding) {
-      setDraftPhotos(draftPhotos.map(p => p.id === id ? { ...p, caption: value } : p));
-    } else {
-      dispatch({ type: 'QUEUE_CAPTION', id, value });
+      return (draftPhotos || []).map((p) => ({
+        id: p.id,
+        photo_url: p.preview || (p.file ? URL.createObjectURL(p.file) : ''),
+        caption: p.caption || p.file?.name || 'Photo',
+        category: p.category || 'food',
+        isDraft: true,
+      }));
     }
-  };
-  const handleQueueRemove = (id) => {
-    if (isOnboarding) {
-      setDraftPhotos(draftPhotos.filter(p => p.id !== id));
-    } else {
-      dispatch({ type: 'QUEUE_REMOVE', id });
-    }
-  };
+    return storePhotos || [];
+  }, [isOnboarding, draftPhotos, storePhotos]);
 
-  const handleQueueClear = () => {
-    if (isOnboarding) {
-      setDraftPhotos([]);
-    } else {
-      dispatch({ type: 'QUEUE_CLEAR' });
-    }
-  };
+  // Current business details from vendors_businesses
+  const selectedBusiness = Array.isArray(vendor_business)
+    ? vendor_business.find((b) => b.id === selectedBusinessId) || vendor_business[0]
+    : null;
 
-  const showToast = (msg, isError = false) => {
-    dispatch({ type: 'TOAST', toast: { msg, isError } });
-    setTimeout(() => dispatch({ type: 'TOAST', toast: null }), 3500);
-  };
-
+  // Load photos for selected business
   useEffect(() => {
-
     if (isOnboarding) {
-      dispatch({ type: 'LOADED' });
+      setTabLoading(false);
       return;
     }
     if (!selectedBusinessId) {
-      dispatch({ type: 'LOADED' });
+      setTabLoading(false);
       return;
     }
-    ('calling gallery photos function');
-
-    fetchGalleryPhotos(selectedBusinessId).finally(() => dispatch({ type: 'LOADED' }));
+    setTabLoading(true);
+    fetchGalleryPhotos(selectedBusinessId).finally(() => setTabLoading(false));
   }, [selectedBusinessId, isOnboarding]);
-  // }, []);
 
-  // ── Drag & drop ─────────────────────────────────────────────────────────────
-  const handleDragOver = (e) => { e.preventDefault(); dispatch({ type: 'DRAG', on: true }); };
-  const handleDragLeave = () => dispatch({ type: 'DRAG', on: false });
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    dispatch({ type: 'DRAG', on: false });
-    const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
-    if (files.length > 0) queueFiles(files);
+  const showToast = (msg, isError = false) => {
+    setToast({ msg, isError });
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files).filter(f => f.type.startsWith('image/'));
-    if (files.length > 0) queueFiles(files);
-    e.target.value = '';
-  };
+  // Dynamic Category Counts
+  const categoryCounts = useMemo(() => {
+    const counts = { all: photos.length, food: 0, interior: 0, staff: 0, other: 0 };
+    photos.forEach((p) => {
+      const cat = p.category?.toLowerCase() || 'other';
+      if (counts[cat] !== undefined) {
+        counts[cat]++;
+      } else {
+        counts.other++;
+      }
+    });
+    return counts;
+  }, [photos]);
 
-  const queueFiles = (files) => {
-    const entries = files.map(file => ({
-      id: `${Date.now()}-${Math.random()}`,
-      file,
-      caption: file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '),
-    }));
+  // Filtered Photos List
+  const filteredPhotos = useMemo(() => {
+    return photos.filter((p) => {
+      // 1. Category Filter
+      if (selectedCategory !== 'all') {
+        const cat = p.category?.toLowerCase() || 'other';
+        if (cat !== selectedCategory) return false;
+      }
+
+      // 2. Search Query Filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase();
+        const captionMatch = p.caption?.toLowerCase().includes(q);
+        const pathMatch = p.storage_path?.toLowerCase().includes(q);
+        if (!captionMatch && !pathMatch) return false;
+      }
+
+      return true;
+    });
+  }, [photos, selectedCategory, searchQuery]);
+
+  // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleUploadPhotos = async (queue) => {
+    if (queue.length === 0) return;
+
     if (isOnboarding) {
-      setDraftPhotos([...draftPhotos, ...entries]);
-    } else {
-      dispatch({ type: 'QUEUE_SET', entries });
+      const newDrafts = queue.map((q) => ({
+        id: q.id,
+        file: q.file,
+        preview: q.preview,
+        caption: q.caption,
+        category: q.category,
+      }));
+      setDraftPhotos([...(draftPhotos || []), ...newDrafts]);
+      showToast(`Added ${queue.length} photo${queue.length !== 1 ? 's' : ''} to onboarding setup.`);
+      return;
     }
-  };
 
-  // ── Upload ───────────────────────────────────────────────────────────────────
-  const handleUploadAll = async () => {
-    if (isOnboarding) {
-      ('upload start and now validating details');
-
-      const businessForm = draftBusinessProfile?.form;
-      if (
-        !businessForm ||
-        !businessForm.businessName?.trim() ||
-        !businessForm.description?.trim() ||
-        !businessForm.address?.trim() ||
-        !businessForm.phone?.trim() ||
-        !businessForm.lat?.trim() ||
-        !businessForm.lng?.trim()
-      ) {
-        showToast('Please complete all required fields in the Business Profile tab.', true);
-        return;
-      }
-      if (!draftMenuItems || draftMenuItems.length === 0) {
-        showToast('Please add at least one menu item in the Menu tab.', true);
-        return;
-      }
-      if (!draftPhotos || draftPhotos.length < 3) {
-        showToast('Please upload at least 3 photos.', true);
-        return;
-      }
-
-      dispatch({ type: 'UPLOAD_START' });
-      try {
-        let res = await submitOnboarding();
-        ('save response from photos tab', res);
-
-        dispatch({ type: 'UPLOAD_DONE' });
-        showToast('Business setup submitted successfully!');
-        if (onSubmitSuccess) onSubmitSuccess();
-      } catch (err) {
-        dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Setup submission failed. Please try again.' });
-      }
-    }
-    else {
-      if (!uploadQueue.length) return;
-      dispatch({ type: 'UPLOAD_START' });
-      try {
-        for (const entry of uploadQueue) {
-          await uploadPhoto(entry.file, entry.caption);
-        }
-        dispatch({ type: 'UPLOAD_DONE' });
-      } catch (err) {
-        dispatch({ type: 'UPLOAD_FAIL', msg: err?.message || 'Upload failed. Please try again.' });
-      }
-    }
-  };
-
-  // ── Delete ───────────────────────────────────────────────────────────────────
-  const handleDelete = async (photo) => {
+    setUploading(true);
     try {
-      ('deleting photo in handle delete', photo.id, photo.storage_path);
+      for (const item of queue) {
+        await uploadPhoto(item.file, item.caption, item.category);
+      }
+      showToast(`Successfully uploaded ${queue.length} photo${queue.length !== 1 ? 's' : ''}.`);
+    } catch (err) {
+      console.error('Photo upload failed:', err);
+      showToast(err?.message || 'Failed to upload photo. Please try again.', true);
+    } finally {
+      setUploading(false);
+    }
+  };
 
+  const handleDeletePhoto = async (photo) => {
+    if (isOnboarding) {
+      setDraftPhotos((draftPhotos || []).filter((p) => p.id !== photo.id));
+      showToast('Photo removed from draft.');
+      return;
+    }
+
+    try {
       await deletePhoto(photo.id, photo.storage_path);
-      dispatch({ type: 'DELETE_DONE' });
       showToast('Photo deleted successfully.');
     } catch (err) {
-      dispatch({ type: 'DELETE_CANCEL' });
+      console.error('Delete photo error:', err);
       showToast(err?.message || 'Failed to delete photo. Please try again.', true);
+    }
+  };
+
+  const handleOpenLightbox = (photo) => {
+    const idx = filteredPhotos.findIndex((p) => p.id === photo.id);
+    setLightboxIndex(idx !== -1 ? idx : 0);
+    setIsLightboxOpen(true);
+  };
+
+  // Onboarding Final Submit Handler
+  const handleSubmitOnboarding = async () => {
+    const businessForm = draftBusinessProfile?.form;
+    if (
+      !businessForm ||
+      !businessForm.businessName?.trim() ||
+      !businessForm.description?.trim() ||
+      !businessForm.address?.trim() ||
+      !businessForm.phone?.trim()
+    ) {
+      showToast('Please complete all required fields in the Business Profile tab.', true);
+      return;
+    }
+    if (!draftMenuItems || draftMenuItems.length === 0) {
+      showToast('Please add at least one menu item in the Menu tab.', true);
+      return;
+    }
+    if (!draftPhotos || draftPhotos.length < 3) {
+      showToast('Please upload at least 3 photos for your restaurant.', true);
+      return;
+    }
+
+    setUploading(true);
+    try {
+      await submitOnboarding();
+      showToast('Restaurant setup submitted successfully!');
+      if (onSubmitSuccess) onSubmitSuccess();
+    } catch (err) {
+      showToast(err?.message || 'Setup submission failed. Please try again.', true);
+    } finally {
+      setUploading(false);
     }
   };
 
   if (tabLoading) return <PhotosSkeleton />;
 
-  return (
-    <div className="w-full space-y-6">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="font-heading text-lg font-semibold" style={{ color: '#FFFFFF' }}>
-            Business Photos
-          </h3>
-          <p className="text-xs mt-0.5" style={{ color: '#9BA4E8' }}>
-            {isOnboarding ? 'Upload photos to showcase your business to customers' : `${photos.length} photo${photos.length !== 1 ? 's' : ''} uploaded · new photos require admin approval`}
-          </p>
-        </div>
-        {!isOnboarding && (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all duration-200 hover:opacity-90 active:scale-95"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
-          >
-            <Icon name="Upload" size={15} color="#0F1A5C" />
-            Upload Photos
-          </button>
-        )}
-      </div>
-
-      {/* Drop Zone */}
+  // Zero-business state (If vendor has no restaurants yet)
+  if (!isOnboarding && (!Array.isArray(vendor_business) || vendor_business.length === 0)) {
+    return (
       <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => !activeQueue.length && fileInputRef.current?.click()}
-        className="rounded-xl p-8 text-center transition-all duration-200"
+        className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
         style={{
-          border: `2px dashed ${dragging ? '#C9A84C' : 'rgba(201,168,76,0.35)'}`,
-          background: dragging ? 'rgba(201,168,76,0.06)' : 'rgba(27,42,139,0.4)',
-          cursor: activeQueue.length ? 'default' : 'pointer',
+          background: '#0D2F83',
+          border: '1px solid #1D4ED8',
+          minHeight: '340px',
         }}
       >
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={handleFileSelect}
-        />
-
-        {uploading ? (
-          <div className="flex flex-col items-center gap-3">
-            <div
-              className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin"
-              style={{ borderColor: '#C9A84C', borderTopColor: 'transparent' }}
-            />
-            <p className="text-sm font-medium" style={{ color: '#C9A84C' }}>{isOnboarding ? 'Submitting and uploading photos…' : 'Uploading photos…'}</p>
-            <p className="text-xs" style={{ color: '#9BA4E8' }}>Please wait, do not close this tab</p>
-          </div>
-        ) : activeQueue.length === 0 ? (
-          <>
-            <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3"
-              style={{ background: 'rgba(201,168,76,0.12)', border: '1px solid rgba(201,168,76,0.3)' }}
-            >
-              <Icon name="ImagePlus" size={26} color="#C9A84C" />
-            </div>
-            <p className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>
-              Drag &amp; drop photos here
-            </p>
-            <p className="text-xs" style={{ color: '#9BA4E8' }}>
-              or click to browse — JPG, PNG, WebP supported
-            </p>
-          </>
-        ) : null}
-      </div>
-
-      {/* Upload Queue */}
-      {activeQueue.length > 0 && !uploading && (
-        <div className="rounded-xl p-4 md:p-5 space-y-4" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
-              Ready to upload — {activeQueue.length} photo{activeQueue.length !== 1 ? 's' : ''}
-            </p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="text-xs px-3 py-1.5 rounded-lg transition-all"
-              style={{ color: '#C9A84C', border: '1px solid rgba(201,168,76,0.3)' }}
-            >
-              + Add more
-            </button>
-          </div>
-
-          {activeQueue.map((entry) => (
-            <div key={entry.id} className="flex items-center gap-3">
-              <img
-                src={URL.createObjectURL(entry.file)}
-                alt="preview"
-                className="w-14 h-14 rounded-lg object-cover flex-shrink-0"
-                style={{ border: '1px solid rgba(201,168,76,0.25)' }}
-              />
-              <input
-                type="text"
-                value={entry.caption}
-                onChange={(e) => handleQueueCaption(entry.id, e.target.value)}
-                placeholder="Add a caption…"
-                className="flex-1 px-3 py-2 text-sm rounded-lg outline-none"
-                style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
-              />
-              <button
-                onClick={() => handleQueueRemove(entry.id)}
-                className="w-8 h-8 flex items-center justify-center rounded-md flex-shrink-0"
-                style={{ color: '#9BA4E8' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.color = '#F87171'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#9BA4E8'; }}
-              >
-                <Icon name="X" size={15} />
-              </button>
-            </div>
-          ))}
-
-          {uploadError && (
-            <p className="text-xs flex items-center gap-1.5" style={{ color: '#F87171' }}>
-              <Icon name="AlertCircle" size={13} color="#F87171" />
-              {uploadError}
-            </p>
-          )}
-
-          <div className="flex items-center gap-3 pt-1">
-            <button
-              onClick={handleUploadAll}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
-            >
-              {isOnboarding ? (
-                <>
-                  <Icon name="CheckCircle" size={15} color="#0F1A5C" />
-                  Submit &amp; Publish Profile
-                </>
-              ) : (
-                <>
-                  <Icon name="Upload" size={15} color="#0F1A5C" />
-                  Upload {activeQueue.length} Photo{activeQueue.length !== 1 ? 's' : ''}
-                </>
-              )}
-            </button>
-            <button
-              onClick={handleQueueClear}
-              className="text-sm px-4 py-2.5 rounded-lg transition-all hover:bg-white/10"
-              style={{ color: '#9BA4E8', border: '1px solid rgba(201,168,76,0.25)' }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Empty State */}
-      {photos.length === 0 && activeQueue.length === 0 && !uploading && (
         <div
-          className="rounded-xl flex flex-col items-center justify-center py-14"
-          style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.25)' }}
+          className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+          style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
         >
-          <div
-            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
-            style={{ background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)' }}
-          >
-            <Icon name="Camera" size={28} color="#C9A84C" />
-          </div>
-          <p className="text-sm font-semibold mb-1" style={{ color: '#FFFFFF' }}>No photos yet</p>
-          <p className="text-xs mb-5" style={{ color: '#9BA4E8' }}>
-            Upload photos to showcase your business to customers
-          </p>
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-bold transition-all hover:opacity-90"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
-          >
-            <Icon name="ImagePlus" size={15} color="#0F1A5C" />
-            Upload First Photo
-          </button>
+          <Icon name="Store" size={28} color="#FBC33B" />
         </div>
-      )}
+        <h3 className="text-xl font-bold text-white mb-2">No Restaurant Found</h3>
+        <p className="text-xs sm:text-sm max-w-md mb-6" style={{ color: '#DCE6FF' }}>
+          Please create a restaurant business first. Once created, you will be able to upload and manage your gallery photos here.
+        </p>
+        <button
+          onClick={onBackToBusinesses}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+          style={{ background: '#FBC33B', color: '#061538' }}
+        >
+          <Icon name="Plus" size={15} color="#061538" strokeWidth={2.5} />
+          <span>Create Business</span>
+        </button>
+      </div>
+    );
+  }
 
-      {/* Photo Grid */}
-      {photos.length > 0 && !isOnboarding && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-          {photos.map((photo) => {
-            return (
-
-              < div
-                key={photo.id}
-                className="group relative rounded-xl overflow-hidden"
-                style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.2)' }}
-              >
-                <div className="aspect-square overflow-hidden">
-                  <Image
-                    src={photo.photo_url}
-                    alt={photo.caption || 'Business photo'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                </div>
-
-                <div className="p-2 flex justify-center py-3 space-y-1.5">
-
-                  <p className="text-sm font-medium truncate" style={{ color: '#FFFFFF' }}>
-                    {photo.caption || '—'}
-                  </p>
-                </div>
-
-                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  {deleteConfirm === photo.id ? (
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => handleDelete(photo)}
-                        className="w-7 h-7 flex items-center justify-center rounded-md shadow-md"
-                        style={{ background: '#F87171' }}
-                        aria-label="Confirm delete"
-                      >
-                        <Icon name="Check" size={13} color="white" />
-                      </button>
-                      <button
-                        onClick={() => dispatch({ type: 'DELETE_CANCEL' })}
-                        className="w-7 h-7 flex items-center justify-center rounded-md shadow-md"
-                        style={{ background: '#1B2A8B', color: '#FFFFFF' }}
-                        aria-label="Cancel"
-                      >
-                        <Icon name="X" size={13} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => dispatch({ type: 'DELETE_ASK', id: photo.id })}
-                      className="w-7 h-7 flex items-center justify-center rounded-md shadow-md transition-all"
-                      style={{ background: 'rgba(15,26,92,0.85)', color: '#F87171' }}
-                      aria-label={`Delete photo ${photo.caption}`}
-                    >
-                      <Icon name="Trash2" size={13} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )
-      }
-
-      {/* Wizard Footer Buttons */}
-      {isOnboarding && (
-        <div className="flex items-center justify-between pt-6 mt-6" style={{ borderTop: '1px solid rgba(201,168,76,0.2)' }}>
-          <button
-            onClick={onPrev}
-            disabled={uploading}
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/10 disabled:opacity-50"
-            style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
-          >
-            <Icon name="ArrowLeft" size={16} color="#9BA4E8" />
-            Back
-          </button>
-          {activeQueue.length === 0 && (
-            <button
-              onClick={handleUploadAll}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all hover:opacity-90"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
-            >
-              Submit &amp; Publish Profile
-              <Icon name="ArrowRight" size={16} color="#0F1A5C" />
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Toast */}
+  return (
+    <div className="w-full space-y-6 lg:space-y-8">
+      {/* Toast Notification */}
       {toast && (
         <div
-          className="fixed bottom-6 right-6 px-4 py-3 rounded-lg shadow-xl text-sm flex items-center gap-2 max-w-sm"
+          className="fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl animate-in slide-in-from-top-4 duration-200 border"
           style={{
-            background: '#1B2A8B',
-            border: `1px solid ${toast.isError ? 'rgba(248,113,113,0.4)' : 'rgba(201,168,76,0.4)'}`,
+            background: toast.isError ? '#FF4D5E' : '#0A2463',
+            borderColor: toast.isError ? '#FF4D5E' : '#10D6A0',
             color: '#FFFFFF',
-            zIndex: 9999,
           }}
         >
           <Icon
-            name={toast.isError ? 'AlertCircle' : 'CheckCircle'}
-            size={16}
-            color={toast.isError ? '#F87171' : '#10B981'}
+            name={toast.isError ? 'AlertCircle' : 'CheckCircle2'}
+            size={18}
+            color={toast.isError ? '#FFFFFF' : '#10D6A0'}
           />
-          {toast.msg}
+          <span className="text-xs font-semibold">{toast.msg}</span>
         </div>
       )}
-    </div >
+
+      {/* ── 1. Hero Header Banner (Total Photos only, approved/pending skipped per instructions) ── */}
+      <PhotoHeroHeader
+        business={selectedBusiness}
+        totalPhotos={photos.length}
+        onBackToBusinesses={onBackToBusinesses}
+        onOpenUploadModal={() => setIsUploadModalOpen(true)}
+      />
+
+      {/* ── 2. Filter Bar with Category Pills & Controls ── */}
+      <PhotoFilterBar
+        selectedCategory={selectedCategory}
+        onSelectCategory={setSelectedCategory}
+        categoryCounts={categoryCounts}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        viewMode={viewMode}
+        onToggleViewMode={setViewMode}
+      />
+
+      {/* ── 3. Main Photos Grid / List View ── */}
+      {filteredPhotos.length === 0 ? (
+        <div
+          className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-inner"
+          style={{
+            background: '#0D2F83',
+            border: '1px solid #1D4ED8',
+            minHeight: '340px',
+          }}
+        >
+          <div
+            className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 shadow"
+            style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+          >
+            <Icon name="Camera" size={28} color="#FBC33B" />
+          </div>
+
+          <h4 className="text-base sm:text-lg font-bold text-white mb-1">
+            {photos.length === 0 ? 'No photos uploaded yet' : 'No photos match your filter'}
+          </h4>
+          <p className="text-xs sm:text-sm max-w-sm mb-6" style={{ color: '#DCE6FF' }}>
+            {photos.length === 0
+              ? 'Upload high-quality photos of your dishes, dining interior, or staff to attract more hungry customers.'
+              : 'Try clearing your search query or selecting "All Photos" to see your gallery.'}
+          </p>
+
+          {photos.length === 0 ? (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs shadow-lg hover:brightness-110 active:scale-95 transition-all cursor-pointer"
+              style={{ background: '#FBC33B', color: '#061538' }}
+            >
+              <Icon name="Upload" size={15} color="#061538" strokeWidth={2.5} />
+              <span>Upload First Photo</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                setSelectedCategory('all');
+                setSearchQuery('');
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-xs hover:bg-[#17439B] transition-all cursor-pointer"
+              style={{
+                background: '#081C49',
+                border: '1px solid #254477',
+                color: '#FBC33B',
+              }}
+            >
+              <Icon name="RotateCcw" size={14} color="#FBC33B" />
+              <span>Reset Filters</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          className={
+            viewMode === 'grid'
+              ? 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 sm:gap-5'
+              : 'flex flex-col gap-3'
+          }
+        >
+          {filteredPhotos.map((photo) => (
+            <PhotoCard
+              key={photo.id}
+              photo={photo}
+              viewMode={viewMode}
+              onSelectPhoto={handleOpenLightbox}
+              onDeletePhoto={handleDeletePhoto}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── 4. Upload Photos Modal with Mandatory Category Selection ── */}
+      <PhotoUploadModal
+        isOpen={isUploadModalOpen}
+        uploading={uploading}
+        onUpload={handleUploadPhotos}
+        onClose={() => setIsUploadModalOpen(false)}
+      />
+
+      {/* ── 5. Full-Screen Photo Lightbox Modal ── */}
+      <PhotoLightboxModal
+        photos={filteredPhotos}
+        currentIndex={lightboxIndex}
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        onChangeIndex={setLightboxIndex}
+      />
+
+      {/* ── 6. Wizard Footer Buttons (During Onboarding) ── */}
+      {isOnboarding && (
+        <div
+          className="flex items-center justify-between pt-6 mt-6 border-t"
+          style={{ borderColor: '#254477' }}
+        >
+          <button
+            onClick={onPrev}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
+            style={{ border: '1px solid #254477', color: '#9FB5F5' }}
+          >
+            <Icon name="ArrowLeft" size={15} color="#9FB5F5" />
+            <span>Back to Menu</span>
+          </button>
+          <button
+            onClick={handleSubmitOnboarding}
+            disabled={uploading}
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-xs hover:brightness-110 active:scale-95 transition-all shadow-lg cursor-pointer disabled:opacity-50"
+            style={{ background: '#FBC33B', color: '#061538' }}
+          >
+            {uploading ? (
+              <span>Submitting Setup...</span>
+            ) : (
+              <>
+                <span>Complete Business Setup</span>
+                <Icon name="Check" size={15} color="#061538" strokeWidth={2.5} />
+              </>
+            )}
+          </button>
+        </div>
+      )}
+    </div>
   );
 };
 
