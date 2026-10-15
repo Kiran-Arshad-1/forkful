@@ -112,8 +112,12 @@ const LoginForm = () => {
 
   return (
     <div
-      className="rounded-xl p-8 md:p-10 w-full"
-      style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)', boxShadow: '0 8px 24px rgba(201,168,76,0.2)' }}
+      className="rounded-2xl p-8 md:p-10 w-full"
+      style={{
+        background: '#0D2F83',
+        border: '1px solid #1D4ED8',
+        boxShadow: '0 16px 36px -12px rgba(6, 21, 56, 0.8)',
+      }}
     >
       {/* Logo */}
       <div className="flex justify-center mb-6">
@@ -124,22 +128,21 @@ const LoginForm = () => {
         />
       </div>
 
-
       {/* Header */}
       <div className="mb-6 text-center">
         <h1 className="text-2xl md:text-3xl font-bold mb-1" style={{ fontFamily: 'var(--font-heading)', color: '#FFFFFF' }}>
           Welcome back
         </h1>
-        <p className="text-sm" style={{ fontFamily: 'var(--font-body)', color: '#9BA4E8' }}>
+        <p className="text-sm" style={{ fontFamily: 'var(--font-body)', color: '#9FB5F5' }}>
           Sign in to manage your ForkFul listing
         </p>
       </div>
 
       {/* Auth Error */}
       {authError && (
-        <div className="flex items-start gap-3 p-3 mb-5 rounded-lg" style={{ background: 'rgba(248,113,113,0.1)', border: '1px solid rgba(248,113,113,0.3)' }}>
-          <Icon name="AlertCircle" size={18} color="#F87171" className="flex-shrink-0 mt-0.5" />
-          <p className="text-sm" style={{ fontFamily: 'var(--font-body)', color: '#F87171' }}>
+        <div className="flex items-start gap-3 p-3.5 mb-5 rounded-xl" style={{ background: 'rgba(255,77,94,0.12)', border: '1px solid #FF4D5E' }}>
+          <Icon name="AlertCircle" size={18} color="#FF4D5E" className="flex-shrink-0 mt-0.5" />
+          <p className="text-sm font-medium" style={{ fontFamily: 'var(--font-body)', color: '#FF4D5E' }}>
             {authError}
           </p>
         </div>
@@ -150,8 +153,8 @@ const LoginForm = () => {
         type="button"
         onClick={handleGoogleSignIn}
         disabled={googleLoading || loading}
-        className="w-full flex items-center justify-center gap-3 h-11 rounded-lg text-sm font-medium transition-all duration-250 mb-4 disabled:opacity-50 hover:opacity-90"
-        style={{ background: '#FFFFFF', color: '#1F2937', border: '1px solid rgba(201,168,76,0.3)' }}
+        className="w-full flex items-center justify-center gap-3 h-11 rounded-xl text-sm font-semibold transition-all duration-200 mb-4 disabled:opacity-50 hover:brightness-110 shadow-sm cursor-pointer"
+        style={{ background: '#FFFFFF', color: '#061538', border: '1px solid #1D4ED8' }}
       >
         {googleLoading ? (
           <div className="w-4 h-4 rounded-full border-2 animate-spin" style={{ borderColor: '#D1D5DB', borderTopColor: '#4285F4' }} />
@@ -163,16 +166,16 @@ const LoginForm = () => {
 
       {/* Divider */}
       <div className="flex items-center gap-3 mb-4">
-        <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
-        <span className="text-xs font-caption" style={{ color: '#9BA4E8' }}>or sign in with email</span>
-        <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+        <div className="flex-1 h-px" style={{ background: '#254477' }} />
+        <span className="text-xs font-caption" style={{ color: '#9FB5F5' }}>or sign in with email</span>
+        <div className="flex-1 h-px" style={{ background: '#254477' }} />
       </div>
 
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         {/* Email */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
-            Email Address <span style={{ color: '#F87171' }}>*</span>
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
+            Email Address <span style={{ color: '#FF4D5E' }}>*</span>
           </label>
           <input
             type="email"
@@ -181,16 +184,20 @@ const LoginForm = () => {
             value={formData.email}
             onChange={handleChange}
             autoComplete="email"
-            className="w-full h-10 rounded-lg px-3 py-2 text-sm outline-none transition-all duration-250"
-            style={{ background: '#0F1A5C', border: errors.email ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+            className="w-full h-11 rounded-xl px-3.5 py-2.5 text-sm outline-none transition-all duration-200 text-white placeholder:text-[#647DBA] focus:border-[#FBC33B]"
+            style={{
+              background: '#081C49',
+              border: errors.email ? '1px solid #FF4D5E' : '1px solid #1D4ED8',
+              color: '#FFFFFF',
+            }}
           />
-          {errors.email && <p className="text-sm" style={{ color: '#F87171' }}>{errors.email}</p>}
+          {errors.email && <p className="text-xs mt-1 font-medium" style={{ color: '#FF4D5E' }}>{errors.email}</p>}
         </div>
 
         {/* Password */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium" style={{ color: '#FFFFFF' }}>
-            Password <span style={{ color: '#F87171' }}>*</span>
+        <div className="space-y-1.5">
+          <label className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>
+            Password <span style={{ color: '#FF4D5E' }}>*</span>
           </label>
           <div className="relative">
             <input
@@ -200,13 +207,17 @@ const LoginForm = () => {
               value={formData.password}
               onChange={handleChange}
               autoComplete="current-password"
-              className="w-full h-10 rounded-lg px-3 py-2 pr-10 text-sm outline-none transition-all duration-250"
-              style={{ background: '#0F1A5C', border: errors.password ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+              className="w-full h-11 rounded-xl px-3.5 py-2.5 pr-10 text-sm outline-none transition-all duration-200 text-white placeholder:text-[#647DBA] focus:border-[#FBC33B]"
+              style={{
+                background: '#081C49',
+                border: errors.password ? '1px solid #FF4D5E' : '1px solid #1D4ED8',
+                color: '#FFFFFF',
+              }}
             />
             <button
               type="button"
-              className="absolute right-3 top-2.5 transition-colors duration-200 p-1"
-              style={{ color: '#9BA4E8' }}
+              className="absolute right-3 top-3 transition-colors duration-200 p-1 hover:text-white"
+              style={{ color: '#9FB5F5' }}
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               tabIndex={-1}
@@ -214,7 +225,7 @@ const LoginForm = () => {
               <Icon name={showPassword ? 'EyeOff' : 'Eye'} size={18} />
             </button>
           </div>
-          {errors.password && <p className="text-sm" style={{ color: '#F87171' }}>{errors.password}</p>}
+          {errors.password && <p className="text-xs mt-1 font-medium" style={{ color: '#FF4D5E' }}>{errors.password}</p>}
         </div>
 
         {/* Remember me + Forgot password */}
@@ -224,16 +235,16 @@ const LoginForm = () => {
               type="checkbox"
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
-              className="w-4 h-4 rounded"
-              style={{ accentColor: '#C9A84C' }}
+              className="w-4 h-4 rounded cursor-pointer"
+              style={{ accentColor: '#FBC33B' }}
             />
-            <span className="text-sm" style={{ color: '#9BA4E8', fontFamily: 'var(--font-body)' }}>Remember me</span>
+            <span className="text-xs sm:text-sm font-medium" style={{ color: '#9FB5F5', fontFamily: 'var(--font-body)' }}>Remember me</span>
           </label>
           <button
             type="button"
             onClick={() => navigate('/password-reset')}
-            className="text-sm font-medium hover:underline transition-all duration-200"
-            style={{ color: '#C9A84C', fontFamily: 'var(--font-body)' }}
+            className="text-xs sm:text-sm font-semibold hover:underline transition-all duration-200 cursor-pointer"
+            style={{ color: '#FBC33B', fontFamily: 'var(--font-body)' }}
           >
             Forgot password?
           </button>
@@ -242,21 +253,21 @@ const LoginForm = () => {
         <button
           type="submit"
           disabled={loading || googleLoading}
-          className="w-full py-3 rounded-lg font-bold text-sm transition-all duration-250 hover:opacity-90 disabled:opacity-50 mt-2"
-          style={{ background: '#C9A84C', color: '#0F1A5C' }}
+          className="w-full py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 disabled:opacity-50 mt-2 shadow-lg cursor-pointer"
+          style={{ background: '#FBC33B', color: '#061538' }}
         >
           {loading ? 'Signing in…' : 'Log In'}
         </button>
       </form>
 
       {/* Sign up link */}
-      <p className="text-center text-sm mt-5" style={{ fontFamily: 'var(--font-body)', color: '#9BA4E8' }}>
+      <p className="text-center text-sm mt-5" style={{ fontFamily: 'var(--font-body)', color: '#9FB5F5' }}>
         New to ForkFul?{' '}
         <button
           type="button"
           onClick={() => navigate('/vendor-signup')}
-          className="font-semibold hover:underline transition-all duration-200"
-          style={{ color: '#C9A84C' }}
+          className="font-bold hover:underline transition-all duration-200 cursor-pointer"
+          style={{ color: '#FBC33B' }}
         >
           Create Account
         </button>

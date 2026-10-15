@@ -13,15 +13,15 @@ const SecurityBadges = () => {
       {badges?.map((badge) => (
         <div
           key={badge?.label}
-          className="flex items-center gap-2 px-3 py-2 rounded-lg"
-          style={{ background: 'rgba(155,164,232,0.1)', border: '1px solid rgba(201,168,76,0.2)' }}
+          className="flex items-center gap-2 px-3 py-2 rounded-xl shadow-sm"
+          style={{ background: '#0A2463', border: '1px solid #1D4ED8' }}
         >
-          <Icon name={badge?.icon} size={15} color="#9BA4E8" />
+          <Icon name={badge?.icon} size={15} color="#FBC33B" />
           <div>
             <p className="text-xs font-semibold leading-tight" style={{ fontFamily: 'var(--font-caption)', color: '#FFFFFF' }}>
               {badge?.label}
             </p>
-            <p className="text-xs leading-tight" style={{ fontFamily: 'var(--font-caption)', color: '#9BA4E8' }}>
+            <p className="text-xs leading-tight" style={{ fontFamily: 'var(--font-caption)', color: '#9FB5F5' }}>
               {badge?.desc}
             </p>
           </div>
