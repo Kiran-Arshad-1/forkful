@@ -6,9 +6,9 @@ import ValueProposition from './components/ValueProposition';
 
 const VendorLogin = () => {
   return (
-    <AuthenticationWrapper>
-      <div className="w-full max-w-4xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 mt-10 items-center">
+    <AuthenticationWrapper contentMaxWidthClass="max-w-6xl">
+      <div className="w-full max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(480px,540px)] gap-8 lg:gap-12 xl:gap-16 mt-10 items-center">
           {/* Left: Value proposition (desktop only) */}
           <ValueProposition />
 
