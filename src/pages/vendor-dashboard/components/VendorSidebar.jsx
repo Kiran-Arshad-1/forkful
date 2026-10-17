@@ -16,7 +16,7 @@ const VendorSidebar = ({
   activeTab,
   onTabChange,
   businessCount = 0,
-  onAddBusiness,
+  desktopOpen = true,
   isOpen = false,
   onClose,
 }) => {
@@ -52,16 +52,6 @@ const VendorSidebar = ({
           </div>
         </div>
 
-        {/* Close button on mobile */}
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg text-[#9FB5F5] hover:text-white hover:bg-[#17439B] transition-colors"
-            aria-label="Close menu"
-          >
-            <Icon name="X" size={20} />
-          </button>
-        )}
       </div>
 
       {/* Navigation List */}
@@ -129,58 +119,6 @@ const VendorSidebar = ({
         })}
       </nav>
 
-      {/* Bottom Promotion Card */}
-      <div className="p-4 mt-auto">
-        <div
-          className="relative rounded-2xl p-4 overflow-hidden text-center shadow-xl"
-          style={{
-            background: 'linear-gradient(145deg, #0A2463 0%, #061538 100%)',
-            border: '1px solid #1D4ED8',
-          }}
-        >
-          {/* Subtle background glow */}
-          <div
-            className="absolute -top-10 left-1/2 -translate-x-1/2 w-28 h-28 rounded-full pointer-events-none blur-2xl"
-            style={{ background: 'rgba(251, 195, 59, 0.15)' }}
-          />
-
-          {/* Crown Icon */}
-          <div
-            className="relative mx-auto mb-2.5 w-10 h-10 rounded-xl flex items-center justify-center shadow-inner"
-            style={{
-              background: '#3C351E',
-              border: '1px solid #FBC33B',
-            }}
-          >
-            <Icon name="Crown" size={20} color="#FBC33B" />
-          </div>
-
-          <h4 className="relative text-sm font-bold text-white tracking-wide">
-            Get More Visibility
-          </h4>
-          <p
-            className="relative text-[11px] mt-1 mb-3.5 leading-relaxed font-normal"
-            style={{ color: '#9FB5F5' }}
-          >
-            Complete your restaurant setup and attract more customers.
-          </p>
-
-          <button
-            onClick={() => {
-              if (onAddBusiness) onAddBusiness();
-              if (onClose) onClose();
-            }}
-            className="relative w-full py-2.5 px-3 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all duration-200 hover:brightness-110 active:scale-[0.98] shadow-lg"
-            style={{
-              background: '#FBC33B',
-              color: '#061538',
-            }}
-          >
-            <span>{businessCount > 0 ? 'Register New Restaurant' : 'Add Your First Business'}</span>
-            <Icon name="ArrowRight" size={13} color="#061538" strokeWidth={2.5} />
-          </button>
-        </div>
-      </div>
     </div>
   );
 
@@ -188,7 +126,10 @@ const VendorSidebar = ({
     <>
       {/* Desktop Persistent Sidebar */}
       <aside
-        className="hidden lg:flex flex-col w-64 h-screen fixed top-0 left-0 z-40 overflow-hidden"
+        id="vendor-desktop-sidebar"
+        className={`hidden lg:flex flex-col w-64 h-screen fixed top-0 left-0 z-40 overflow-hidden transform transition-transform duration-300 ease-in-out ${
+          desktopOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
         style={{
           background: '#061538',
           borderRight: '1px solid #254477',
@@ -200,7 +141,7 @@ const VendorSidebar = ({
       {/* Mobile Drawer Backdrop */}
       {isOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm transition-opacity"
+          className="lg:hidden fixed inset-x-0 top-[72px] bottom-0 z-40 bg-black/70 backdrop-blur-sm transition-opacity"
           onClick={onClose}
           aria-hidden="true"
         />
@@ -208,7 +149,8 @@ const VendorSidebar = ({
 
       {/* Mobile Sliding Drawer */}
       <aside
-        className={`lg:hidden fixed top-0 left-0 bottom-0 z-50 w-72 max-w-[85vw] transform transition-transform duration-300 ease-in-out ${
+        id="vendor-mobile-sidebar"
+        className={`lg:hidden fixed top-[72px] left-0 bottom-0 z-50 w-72 max-w-[85vw] transform transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
         style={{

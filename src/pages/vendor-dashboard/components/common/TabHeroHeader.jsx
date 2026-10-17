@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from 'components/AppIcon';
+import { getBusinessStatus } from '../../utils/businessStatus';
 
 const TabHeroHeader = ({
   business,
@@ -24,14 +25,8 @@ const TabHeroHeader = ({
 
   const description = business?.description?.trim() || null;
 
-  const rawStatus = business?.status || business?.approval_status || 'pending';
-  const isApproved = rawStatus === 'active' || rawStatus === 'approved';
-  const isBlocked = rawStatus === 'blocked' || rawStatus === 'rejected';
-  const status = isApproved
-    ? { label: 'Approved & Live', color: '#10D6A0', background: 'rgba(16, 214, 160, 0.15)' }
-    : isBlocked
-      ? { label: rawStatus === 'rejected' ? 'Changes Required' : 'Blocked', color: '#FF6B79', background: 'rgba(255, 107, 121, 0.15)' }
-      : { label: 'Pending Review', color: '#FBBF24', background: 'rgba(251, 191, 36, 0.15)' };
+  const status = getBusinessStatus(business?.status);
+  const isApproved = status.key === 'approved';
 
   return (
     <div className="w-full space-y-4">
@@ -106,7 +101,7 @@ const TabHeroHeader = ({
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 style={{
                   background: status.background,
-                  border: `1px solid ${status.color}`,
+                  border: `1px solid ${status.border}`,
                   color: status.color,
                 }}
               >

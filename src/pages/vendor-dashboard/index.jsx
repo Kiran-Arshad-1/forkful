@@ -14,6 +14,7 @@ import BillingTab from './components/BillingTab';
 import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 import SettingsTab from './components/SettingsTab';
+import { getBusinessStatus } from './utils/businessStatus';
 
 const GENDER_OPTIONS = [
   { value: 'female', label: 'Female' },
@@ -24,6 +25,7 @@ const GENDER_OPTIONS = [
 
 const VendorDashboard = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const navigate = useNavigate();
   const { profile: authProfile, user, signOut } = useAuthStore();
 
@@ -57,10 +59,21 @@ const VendorDashboard = () => {
     }
   }, [user?.id, storeProfile]);
 
+  // Refresh business rows after returning from another window (for example,
+  // after an admin changes a listing status in a separate session).
+  useEffect(() => {
+    if (!user?.id) return undefined;
+
+    const refreshBusinesses = () => fetchVendorBusiness(user.id);
+    window.addEventListener('focus', refreshBusinesses);
+    return () => window.removeEventListener('focus', refreshBusinesses);
+  }, [user?.id, fetchVendorBusiness]);
+
   const profile = storeProfile || authProfile;
   const vendorName = profile?.full_name || user?.email || 'Vendor';
   const vendorEmail = profile?.email || user?.email || '';
-  const approvalStatus = profile?.approval_status;
+  const selectedBusiness = vendor_business?.find((business) => business.id === selectedBusinessId) || vendor_business?.[0];
+  const selectedBusinessDisplayStatus = getBusinessStatus(selectedBusiness?.status);
 
   // Wizard Step Completion Guards:
   // Step 1: Business details must be filled to advance to menu items
@@ -85,6 +98,18 @@ const VendorDashboard = () => {
     setSelectedBusinessId(businessId);
     setIsCreatingBusiness(false);
     setIsEditingBusiness(false);
+  };
+
+  const handleViewBusiness = (businessId) => {
+    handleSelectBusiness(businessId);
+    setActiveTab('business-profile');
+  };
+
+  const handleManageBusiness = async (businessId) => {
+    await setSelectedBusinessId(businessId);
+    setIsCreatingBusiness(false);
+    setIsEditingBusiness(true);
+    setActiveTab('business-profile');
   };
 
   // ── Edit Profile modal ────────────────────────────────────────────────────────
@@ -160,18 +185,18 @@ const VendorDashboard = () => {
     <>
       <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>
         <DashboardOverviewTab
-          hasBusiness={Array.isArray(vendor_business) && vendor_business.length > 0}
-          businessCount={vendor_business?.length || 0}
-          approvalStatus={approvalStatus}
+          businesses={Array.isArray(vendor_business) ? vendor_business : []}
+          vendorName={vendorName}
           onNavigateToTab={(tab) => {
             setActiveTab(tab);
           }}
           onAddBusiness={handleAddBusiness}
+          onViewBusiness={handleViewBusiness}
+          onManageBusiness={handleManageBusiness}
         />
       </div>
       <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
         <BusinessProfileTab
-          approvalStatus={approvalStatus}
           isOnboarding={isBusinessProfileOnboarding}
           onNext={() => setActiveTab('menu')}
         />
@@ -235,13 +260,13 @@ const VendorDashboard = () => {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         businessCount={vendor_business?.length || 0}
-        onAddBusiness={handleAddBusiness}
+        desktopOpen={desktopSidebarOpen}
         isOpen={mobileSidebarOpen}
         onClose={() => setMobileSidebarOpen(false)}
       />
 
       {/* ── Main Layout Column ── */}
-      <div className="flex-1 flex flex-col min-w-0 lg:pl-64">
+      <div className={`flex-1 flex flex-col min-w-0 transition-[padding] duration-300 ${desktopSidebarOpen ? 'lg:pl-64' : 'lg:pl-0'}`}>
         {/* ── Top Header ── */}
         <VendorHeader
           vendorName={vendorName}
@@ -254,7 +279,10 @@ const VendorDashboard = () => {
           onAddBusiness={handleAddBusiness}
           onOpenEditProfile={openEditModal}
           onLogout={handleLogout}
-          onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
+          isMobileSidebarOpen={mobileSidebarOpen}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((isOpen) => !isOpen)}
+          isDesktopSidebarOpen={desktopSidebarOpen}
+          onToggleDesktopSidebar={() => setDesktopSidebarOpen((isOpen) => !isOpen)}
         />
 
         {/* ── Content View ── */}
@@ -263,17 +291,17 @@ const VendorDashboard = () => {
           <div
             className="sm:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border mb-4 w-fit"
             style={{
-              background: approvalStatus === 'approved' ? 'rgba(16,214,160,0.12)' : 'rgba(251,191,36,0.12)',
-              color: approvalStatus === 'approved' ? '#10D6A0' : '#FBBF24',
-              borderColor: approvalStatus === 'approved' ? 'rgba(16,214,160,0.3)' : 'rgba(251,191,36,0.3)',
+              background: selectedBusinessDisplayStatus.background,
+              color: selectedBusinessDisplayStatus.color,
+              borderColor: selectedBusinessDisplayStatus.border,
             }}
           >
             <Icon
-              name={approvalStatus === 'approved' ? 'CheckCircle' : 'Clock'}
+              name={selectedBusinessDisplayStatus.icon}
               size={12}
-              color={approvalStatus === 'approved' ? '#10D6A0' : '#FBBF24'}
+              color={selectedBusinessDisplayStatus.color}
             />
-            {approvalStatus === 'approved' ? 'Approved & Live' : 'Pending Approval'}
+            {selectedBusinessDisplayStatus.label}
           </div>
 
           <div role="tabpanel" id={`tabpanel-${activeTab}`} aria-labelledby={`tab-${activeTab}`}>

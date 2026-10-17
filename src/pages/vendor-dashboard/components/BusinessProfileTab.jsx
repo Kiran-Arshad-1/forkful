@@ -38,7 +38,7 @@ const defaultHours = DAYS?.reduce((acc, day) => {
 const BARBADOS_CENTER = { lat: 13.1939, lng: -59.5432 };
 const BARBADOS_ZOOM = 11;
 
-const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
+const BusinessProfileTab = ({ isOnboarding, onNext }) => {
   const { user } = useAuthStore();
 
   const {
@@ -494,17 +494,6 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                 <Icon name="X" size={14} />
                 Cancel
               </button>
-            </div>
-          )}
-
-          {/* Approval Status Banner */}
-          {approvalStatus === 'approved' && !isEditingBusiness && (
-            <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(16,214,160,0.12)', border: '1px solid #10D6A0' }}>
-              <Icon name="CheckCircle" size={18} color="#10D6A0" className="flex-shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold" style={{ color: '#10D6A0' }}>Profile Approved &amp; Live</p>
-                <p className="text-xs mt-0.5" style={{ color: '#9FB5F5' }}>Your business is visible to customers on ForkFul.</p>
-              </div>
             </div>
           )}
 

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Icon from 'components/AppIcon';
+import { getBusinessStatus } from '../utils/businessStatus';
 
 const VendorHeader = ({
   vendorName = 'Vendor',
@@ -13,6 +14,9 @@ const VendorHeader = ({
   onOpenEditProfile,
   onLogout,
   onToggleMobileSidebar,
+  isMobileSidebarOpen = false,
+  onToggleDesktopSidebar,
+  isDesktopSidebarOpen = true,
 }) => {
   const [showRestaurantMenu, setShowRestaurantMenu] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -40,10 +44,11 @@ const VendorHeader = ({
   }, []);
 
   const selectedBusiness = businesses.find((b) => b.id === selectedBusinessId) || businesses[0];
+  const selectedBusinessStatus = getBusinessStatus(selectedBusiness?.status);
 
   return (
     <header
-      className="sticky top-0 z-30 w-full h-18 px-4 sm:px-6 lg:px-8 flex items-center justify-between"
+      className="sticky top-0 z-[60] w-full h-18 px-4 sm:px-6 lg:px-8 flex items-center justify-between"
       style={{
         background: '#0A2463', // Royal Navy
         borderBottom: '1px solid #254477', // Subtle Border
@@ -55,10 +60,33 @@ const VendorHeader = ({
         {/* Mobile Sidebar Hamburger */}
         <button
           onClick={onToggleMobileSidebar}
-          className="lg:hidden p-2 rounded-xl text-[#9FB5F5] hover:text-white hover:bg-[#17439B] transition-colors"
-          aria-label="Open navigation menu"
+          className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+          style={{
+            color: isMobileSidebarOpen ? '#FBC33B' : '#9FB5F5',
+            background: isMobileSidebarOpen ? '#3C351E' : 'transparent',
+            border: isMobileSidebarOpen ? '1px solid #FBC33B' : '1px solid transparent',
+          }}
+          aria-label={isMobileSidebarOpen ? 'Close navigation menu' : 'Open navigation menu'}
+          aria-expanded={isMobileSidebarOpen}
+          aria-controls="vendor-mobile-sidebar"
         >
-          <Icon name="Menu" size={22} />
+          <Icon name={isMobileSidebarOpen ? 'X' : 'Menu'} size={24} />
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleDesktopSidebar}
+          className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl transition-colors hover:bg-[#17439B]"
+          style={{
+            color: isDesktopSidebarOpen ? '#FBC33B' : '#9FB5F5',
+            background: isDesktopSidebarOpen ? '#3C351E' : 'transparent',
+            border: isDesktopSidebarOpen ? '1px solid #FBC33B' : '1px solid #254477',
+          }}
+          aria-label={isDesktopSidebarOpen ? 'Collapse navigation sidebar' : 'Open navigation sidebar'}
+          aria-expanded={isDesktopSidebarOpen}
+          aria-controls="vendor-desktop-sidebar"
+        >
+          <Icon name="Menu" size={24} />
         </button>
 
         {/* Restaurant Selector Dropdown */}
@@ -90,9 +118,9 @@ const VendorHeader = ({
               </span>
               <span
                 className="text-[10px] sm:text-[11px] font-medium leading-tight"
-                style={{ color: '#9FB5F5' }}
+                style={{ color: selectedBusiness ? selectedBusinessStatus.color : '#9FB5F5' }}
               >
-                {selectedBusiness ? 'Active business' : 'Choose a restaurant to manage'}
+                {selectedBusiness ? selectedBusinessStatus.label : 'Choose a restaurant to manage'}
               </span>
             </div>
 
