@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import Icon from 'components/AppIcon';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
@@ -52,11 +52,6 @@ const getGenderBadgeStyle = (gender = '') => {
       background: 'rgba(167,139,250,0.16)',
       border: '1px solid #A78BFA',
       color: '#DDD6FE',
-    },
-    non_binary: {
-      background: 'rgba(45,212,191,0.16)',
-      border: '1px solid #2DD4BF',
-      color: '#99F6E4',
     },
     other: {
       background: 'rgba(251,195,59,0.14)',
@@ -127,29 +122,28 @@ const DetailItem = ({ icon, label, value, href }) => {
   );
 };
 
-const PreferenceToggle = ({ icon, title, description, enabled, onChange }) => (
-  <div className="flex items-center gap-3 py-3.5">
+const TipItem = ({ number, icon, title, description }) => (
+  <div
+    className="relative flex items-start gap-3.5 rounded-xl p-4 overflow-hidden"
+    style={{ background: COLORS.inset, border: `1px solid ${COLORS.mutedBorder}` }}
+  >
+    <span
+      className="absolute right-3 top-2 text-3xl font-black select-none"
+      style={{ color: 'rgba(159,181,245,0.08)' }}
+      aria-hidden="true"
+    >
+      {String(number).padStart(2, '0')}
+    </span>
     <div
-      className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0"
-      style={{ background: COLORS.inset, border: `1px solid ${COLORS.border}` }}
+      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 relative"
+      style={{ background: '#3C351E', border: `1px solid ${COLORS.gold}` }}
     >
-      <Icon name={icon} size={16} color={COLORS.muted} />
+      <Icon name={icon} size={18} color={COLORS.gold} />
     </div>
-    <div className="flex-1 min-w-0">
-      <p className="text-sm font-semibold text-white">{title}</p>
-      <p className="text-[11px] mt-0.5" style={{ color: COLORS.muted }}>{description}</p>
+    <div className="flex-1 min-w-0 relative pr-5">
+      <p className="text-sm font-bold text-white">{title}</p>
+      <p className="text-xs mt-1 leading-5" style={{ color: COLORS.muted }}>{description}</p>
     </div>
-    <button
-      type="button"
-      role="switch"
-      aria-checked={enabled}
-      aria-label={title}
-      onClick={() => onChange(!enabled)}
-      className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors duration-200"
-      style={{ background: enabled ? COLORS.gold : '#314B82' }}
-    >
-      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-    </button>
   </div>
 );
 
@@ -271,16 +265,6 @@ const ProfileHero = ({ profile, user, onEditAccount }) => {
 const SettingsTab = ({ onEditAccount }) => {
   const { user } = useAuthStore();
   const { profile } = useVendorProfileStore();
-  const [preferences, setPreferences] = useState({
-    reviews: true,
-    approval: true,
-    billing: true,
-    product: false,
-  });
-
-  const updatePreference = (key, enabled) => {
-    setPreferences((current) => ({ ...current, [key]: enabled }));
-  };
 
   const accountEmail = profile?.email || user?.email;
 
@@ -288,13 +272,13 @@ const SettingsTab = ({ onEditAccount }) => {
     <div className="w-full space-y-6">
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: COLORS.gold }}>Account Settings</p>
-        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mt-1">Profile & Preferences</h1>
-        <p className="text-sm mt-1" style={{ color: COLORS.muted }}>Manage your vendor identity and notification preferences.</p>
+        <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mt-1">Profile & Account</h1>
+        <p className="text-sm mt-1" style={{ color: COLORS.muted }}>Manage your vendor identity and account information.</p>
       </div>
 
       <ProfileHero profile={profile} user={user} onEditAccount={onEditAccount} />
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 items-start">
         <SettingsSection
           icon="UserRound"
           title="Vendor Account"
@@ -319,19 +303,19 @@ const SettingsTab = ({ onEditAccount }) => {
         </SettingsSection>
 
         <SettingsSection
-          icon="Bell"
-          title="Notification Preferences"
-          description="Choose which dashboard notifications you would like to receive."
+          icon="Lightbulb"
+          title="Tips for a Stronger Listing"
+          description="Simple ways to keep your ForkFul presence useful and attractive."
         >
-          <div className="divide-y" style={{ borderColor: COLORS.mutedBorder }}>
-            <PreferenceToggle icon="Star" title="New Reviews" description="Updates when customers leave a review." enabled={preferences.reviews} onChange={(value) => updatePreference('reviews', value)} />
-            <PreferenceToggle icon="BadgeCheck" title="Business Approval" description="Updates about your listing approval status." enabled={preferences.approval} onChange={(value) => updatePreference('approval', value)} />
-            <PreferenceToggle icon="CreditCard" title="Billing Updates" description="Reminders about subscription and billing activity." enabled={preferences.billing} onChange={(value) => updatePreference('billing', value)} />
-            <PreferenceToggle icon="Megaphone" title="ForkFul Updates" description="Product news, features, and vendor tips." enabled={preferences.product} onChange={(value) => updatePreference('product', value)} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
+            <TipItem number={1} icon="Store" title="Keep details complete" description="Accurate contact information and business details help customers reach you." />
+            <TipItem number={2} icon="Camera" title="Use fresh, clear photos" description="Show your food, space, and team with well-lit images that represent your business." />
+            <TipItem number={3} icon="Clock3" title="Maintain accurate hours" description="Update opening hours whenever your regular schedule or holiday availability changes." />
+            <TipItem number={4} icon="MessageSquareReply" title="Respond to reviews" description="Thoughtful owner replies show customers that you value their feedback and experience." />
           </div>
-          <p className="flex items-center gap-1.5 text-[11px] mt-3" style={{ color: COLORS.muted }}>
-            <Icon name="Info" size={12} color={COLORS.muted} />
-            Preferences are visual only and are not saved to Supabase yet.
+          <p className="flex items-start gap-2 text-[11px] leading-5 mt-4 rounded-xl p-3" style={{ color: '#DCE6FF', background: 'rgba(251,195,59,0.08)', border: '1px solid rgba(251,195,59,0.25)' }}>
+            <Icon name="Sparkles" size={14} color={COLORS.gold} className="flex-shrink-0 mt-0.5" />
+            Complete, current listings make it easier for customers to choose your business with confidence.
           </p>
         </SettingsSection>
       </div>
