@@ -148,7 +148,7 @@ const PreferenceToggle = ({ icon, title, description, enabled, onChange }) => (
       className="relative w-11 h-6 rounded-full flex-shrink-0 transition-colors duration-200"
       style={{ background: enabled ? COLORS.gold : '#314B82' }}
     >
-      <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+      <span className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white shadow transition-transform duration-200 ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
   </div>
 );
