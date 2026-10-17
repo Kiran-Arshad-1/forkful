@@ -7,15 +7,6 @@ const DEFAULT_HOURS = DAYS.reduce((acc, day) => {
   return acc;
 }, {});
 
-const buildOpeningHoursPayload = (hours) => DAYS.reduce((acc, day) => {
-  const entry = hours?.[day] ?? {};
-  acc[day.toLowerCase()] = {
-    status: entry.closed ? 'closed' : 'open',
-    open_time: entry.open ?? '09:00',
-    close_time: entry.close ?? '21:00',
-  };
-  return acc;
-}, {});
 const normalizePhotoCaption = (fileName = '') => {
   const baseName = fileName.replace(/\.[^/.]+$/, '');
   const withoutPrefix = baseName.replace(/^\d+-/, '');
@@ -30,6 +21,7 @@ const useVendorProfileStore = create((set, get) => ({
   photos: [],
   reviews: [],
   isLoading: false,
+  isOpeningHoursLoading: false,
   isSaving: false,
   error: null,
   vendor_business: [],   // get all businesses for a vendor to populate the business profile tab
@@ -40,19 +32,21 @@ const useVendorProfileStore = create((set, get) => ({
   draftMenuItems: [],
   draftPhotos: [],
   isCreatingBusiness: false,
+  isEditingBusiness: false,
   selectedBusinessId: '',
   setDraftBusinessProfile: (data) => set({ draftBusinessProfile: data }),
   setDraftMenuItems: (items) => set({ draftMenuItems: items }),
   setDraftPhotos: (photos) => set({ draftPhotos: photos }),
   setIsCreatingBusiness: (val) => set({ isCreatingBusiness: val }),
+  setIsEditingBusiness: (val) => set({ isEditingBusiness: val }),
   setSelectedBusinessId: async (id) => {
-    set({ selectedBusinessId: id });
+    set({ selectedBusinessId: id, isEditingBusiness: false, isOpeningHoursLoading: Boolean(id) });
     if (!id) return;
     try {
       const openingHours = await svc.fetchOpeningHours(id);
-      set({ openingHours });
+      set({ openingHours, isOpeningHoursLoading: false });
     } catch (err) {
-      set({ error: err?.message ?? 'Failed to load opening hours' });
+      set({ isOpeningHoursLoading: false, error: err?.message ?? 'Failed to load opening hours' });
     }
   },
   activeTab: 'dashboard',
@@ -61,6 +55,7 @@ const useVendorProfileStore = create((set, get) => ({
     get().clearDrafts();
     set({
       isCreatingBusiness: true,
+      isEditingBusiness: false,
       activeTab: 'business-profile',
     });
   },
@@ -68,6 +63,7 @@ const useVendorProfileStore = create((set, get) => ({
     get().clearDrafts();
     set({
       isCreatingBusiness: false,
+      isEditingBusiness: false,
       activeTab: 'business-profile',
     });
   },
@@ -79,6 +75,7 @@ const useVendorProfileStore = create((set, get) => ({
 
   fetchVendorBusiness: async (vendorId) => {
     try {
+      set({ isOpeningHoursLoading: true });
       ('vendor business caling');
 
       let businessRes = await svc.vendorBusinesses(vendorId);
@@ -86,7 +83,9 @@ const useVendorProfileStore = create((set, get) => ({
 
       const businesses = businessRes?.data ?? [];
       const currentSelected = get().selectedBusinessId;
-      const selectedId = currentSelected || businesses[0]?.id || '';
+      const selectedId = businesses.some((business) => business.id === currentSelected)
+        ? currentSelected
+        : businesses[0]?.id || '';
 
       let openingHours = DEFAULT_HOURS;
       if (selectedId) {
@@ -96,17 +95,18 @@ const useVendorProfileStore = create((set, get) => ({
         vendor_business: businesses,
         isCreatingBusiness: false,
         selectedBusinessId: selectedId,
-        openingHours
+        openingHours,
+        isOpeningHoursLoading: false,
       });
     } catch (err) {
-      set({ error: err?.message ?? 'Failed to load vendor business' });
+      set({ isOpeningHoursLoading: false, error: err?.message ?? 'Failed to load vendor business' });
     }
   },
 
   // ── Fetch profile + opening hours (call once on dashboard mount) ────────────
   // Pass seedProfile from authStore to skip an extra DB round-trip.
   fetchProfile: async (userId, seedProfile) => {
-    set({ isLoading: true, error: null });
+    set({ isLoading: true, isOpeningHoursLoading: true, error: null });
     try {
       const profile = seedProfile ?? (await svc.fetchVendorProfile(userId));
       const profileId = profile?.vendor_id;
@@ -120,7 +120,9 @@ const useVendorProfileStore = create((set, get) => ({
       const businessRes = await svc.vendorBusinesses(profileId);
       const businesses = businessRes?.data ?? [];
       const currentSelected = get().selectedBusinessId;
-      const selectedId = currentSelected || businesses[0]?.id || '';
+      const selectedId = businesses.some((business) => business.id === currentSelected)
+        ? currentSelected
+        : businesses[0]?.id || '';
 
       let openingHours = DEFAULT_HOURS;
       if (selectedId) {
@@ -134,25 +136,23 @@ const useVendorProfileStore = create((set, get) => ({
         vendor_business: businesses,
         isCreatingBusiness: false,
         selectedBusinessId: selectedId,
+        isOpeningHoursLoading: false,
         isLoading: false
       });
     } catch (err) {
-      set({ isLoading: false, error: err?.message ?? 'Failed to load profile' });
+      set({ isLoading: false, isOpeningHoursLoading: false, error: err?.message ?? 'Failed to load profile' });
     }
   },
 
   // ── One-shot save for the "Save Profile" button (profile + hours in parallel) ─
-  saveBusinessProfile: async (form, hours) => {
-    const { profile, vendorId } = get();
-    ('Saving business profile with form data:', form, 'and hours:', hours);
-    (('profel get', profile.vendor_id));
+  saveBusinessProfile: async (form, hours, businessIdToUpdate = null) => {
+    const { profile, vendorId, isEditingBusiness, selectedBusinessId } = get();
+    const targetBusinessId = businessIdToUpdate || (isEditingBusiness ? selectedBusinessId : null);
 
-    if (!profile) return;
     set({ isSaving: true, error: null });
 
     const lat = parseFloat(form.lat);
     const lng = parseFloat(form.lng);
-
 
     const businessUpdates = {
       name: form.businessName,
@@ -161,35 +161,49 @@ const useVendorProfileStore = create((set, get) => ({
       parish: form.parish,
       address: form.address,
       phone: form.phone,
-      opening_hours: buildOpeningHoursPayload(hours),
+      email: form.email?.trim() || null,
+      website: form.website?.trim() || null,
       status: 'pending',
-
       ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
     };
 
     try {
       const ownerId = profile?.vendor_id ?? vendorId;
-      ('vendorid', vendorId, 'ownerId', ownerId);
-      if (!ownerId) throw new Error('Missing vendor owner id for business record');
-      const profileId = profile?.vendor_id
+      const profileId = profile?.vendor_id;
 
-      const [newBusiness] = await Promise.all([
-        svc.insertVendorBusiness(ownerId, businessUpdates),
-      ]);
+      let savedId = targetBusinessId;
 
-      if (newBusiness?.id) {
-        await svc.saveOpeningHours(newBusiness.id, hours);
+      if (targetBusinessId) {
+        // Updating existing business
+        await svc.updateVendorBusiness(targetBusinessId, businessUpdates);
+        await svc.saveOpeningHours(targetBusinessId, hours);
+      } else {
+        // Creating new business
+        if (!ownerId) throw new Error('Missing vendor owner id for business record');
+        const newBusiness = await svc.insertVendorBusiness(ownerId, businessUpdates);
+        if (newBusiness?.id) {
+          savedId = newBusiness.id;
+          await svc.saveOpeningHours(newBusiness.id, hours);
+        }
       }
 
-      const businessRes = await svc.vendorBusinesses(profileId);
-      const businesses = businessRes?.data ?? [];
+      let businesses = [];
+      if (profileId) {
+        const businessRes = await svc.vendorBusinesses(profileId);
+        businesses = businessRes?.data ?? [];
+      } else if (ownerId) {
+        const businessRes = await svc.vendorBusinesses(ownerId);
+        businesses = businessRes?.data ?? [];
+      }
 
       set({
         openingHours: hours,
         vendor_business: businesses,
-        selectedBusinessId: newBusiness?.id || get().selectedBusinessId,
-        isSaving: false
+        selectedBusinessId: savedId || get().selectedBusinessId,
+        isSaving: false,
+        isEditingBusiness: false,
       });
+      return savedId;
     } catch (err) {
       set({ isSaving: false, error: err?.message ?? 'Failed to save profile' });
       throw err;
@@ -197,7 +211,7 @@ const useVendorProfileStore = create((set, get) => ({
   },
 
   // ── Granular updates (use when auto-saving individual sections) ─────────────
-  updateBasicInfo: async ({ full_name, address, contact_phone }) => {
+  updateBasicInfo: async ({ full_name, address, contact_phone, gender }) => {
     const { profile } = get();
     if (!profile) return;
     const profileId = profile?.vendor_id
@@ -206,36 +220,9 @@ const useVendorProfileStore = create((set, get) => ({
       const updated = await svc.updateVendorProfile(profileId, {
         full_name,
         address,
-        contact_phone
+        contact_phone,
+        gender,
       });
-      set({ profile: updated, isSaving: false });
-    } catch (err) {
-      set({ isSaving: false, error: err?.message });
-      throw err;
-    }
-  },
-
-  updateLocation: async (lat, lng) => {
-    const { profile } = get();
-    if (!profile) return;
-    const profileId = profile?.vendor_id
-    set({ isSaving: true, error: null });
-    try {
-      const updated = await svc.updateVendorProfile(profileId, { latitude: lat, longitude: lng });
-      set({ profile: updated, isSaving: false });
-    } catch (err) {
-      set({ isSaving: false, error: err?.message });
-      throw err;
-    }
-  },
-
-  updateContactInfo: async ({ phone, whatsapp, instagram }) => {
-    const { profile } = get();
-    if (!profile) return;
-    const profileId = profile?.vendor_id;
-    set({ isSaving: true, error: null });
-    try {
-      const updated = await svc.updateVendorProfile(profileId, { phone, whatsapp, instagram });
       set({ profile: updated, isSaving: false });
     } catch (err) {
       set({ isSaving: false, error: err?.message });
@@ -524,16 +511,6 @@ const useVendorProfileStore = create((set, get) => ({
       const lat = parseFloat(form.lat);
       const lng = parseFloat(form.lng);
 
-      const updates = {
-        description: form.description,
-        cuisine_type: form.cuisineType,
-        parish: form.parish,
-        address: form.address,
-        phone: form.phone,
-        whatsapp: form.whatsapp,
-        instagram: form.instagram,
-        ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),
-      };
       let photosResult
       // 3. Upload Business Photos
       (`[onboarding] uploading ${draftPhotos.length} photos...`);
@@ -553,7 +530,8 @@ const useVendorProfileStore = create((set, get) => ({
         address: form.address,
         phone: form.phone,
         business_images_urls: pubUrls,
-        email: profile.email,
+        email: form.email?.trim() || profile.email || null,
+        website: form.website?.trim() || null,
         status: 'pending',
         created_at: new Date().toISOString(),
         ...(!isNaN(lat) && !isNaN(lng) && { latitude: lat, longitude: lng }),

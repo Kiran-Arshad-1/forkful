@@ -216,7 +216,7 @@ const LoginForm = () => {
             />
             <button
               type="button"
-              className="absolute right-3 top-3 transition-colors duration-200 p-1 hover:text-white"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 transition-colors duration-200 hover:text-white"
               style={{ color: '#9FB5F5' }}
               onClick={() => setShowPassword(!showPassword)}
               aria-label={showPassword ? 'Hide password' : 'Show password'}

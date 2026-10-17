@@ -56,11 +56,26 @@ export async function insertVendorBusiness(ownerId, updates) {
   return data;
 }
 
+export async function updateVendorBusiness(businessId, updates) {
+  const { data, error } = await supabase
+    .from(BUSINESS_TABLE)
+    .update({ ...updates, updated_at: new Date().toISOString() })
+    .eq('id', businessId)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Error updating business profile:', error);
+    throw error;
+  }
+  return data;
+}
+
 // ─── Opening Hours ────────────────────────────────────────────────────────────
 
 function rowsToMap(rows) {
   const map = DAYS.reduce((acc, day) => {
-    acc[day] = { open: '09:00', close: '21:00', closed: false };
+    acc[day] = { open: '09:00', close: '21:00', closed: false, configured: false };
     return acc;
   }, {});
 
@@ -69,6 +84,7 @@ function rowsToMap(rows) {
       open: row.open_time,
       close: row.close_time,
       closed: row.is_closed,
+      configured: true,
     };
   }
   return map;
@@ -93,7 +109,7 @@ export async function saveOpeningHours(businessId, hoursMap) {
     is_closed: hoursMap[day]?.closed ?? false,
   }));
 
-  // Requires UNIQUE(vendor_id, day_of_week) constraint on the table
+  // Requires UNIQUE(business_id, day_of_week) constraint on the table.
   const { error } = await supabase
     .from(HOURS_TABLE)
     .upsert(rows, { onConflict: 'business_id, day_of_week' });

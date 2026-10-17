@@ -13,6 +13,14 @@ import PhotosTab from './components/PhotosTab';
 import BillingTab from './components/BillingTab';
 import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
+import SettingsTab from './components/SettingsTab';
+
+const GENDER_OPTIONS = [
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'other', label: 'Other' },
+  { value: 'prefer_not_to_say', label: 'Prefer not to say' },
+];
 
 const VendorDashboard = () => {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
@@ -89,11 +97,13 @@ const VendorDashboard = () => {
   const photoInputRef = useRef(null);
   const [editAddress, setEditAddress] = useState('');
   const [editContactNumber, setEditContactNumber] = useState('');
+  const [editGender, setEditGender] = useState('');
 
   const openEditModal = () => {
     setEditName(storeProfile?.full_name || vendorName);
     setEditAddress(storeProfile?.address || '');
-    setEditContactNumber(storeProfile?.phone_number || '');
+    setEditContactNumber(storeProfile?.contact_phone || '');
+    setEditGender(storeProfile?.gender || '');
     setPhotoFile(null);
     setPhotoPreview(storeProfile?.profile_image_url || null);
     setEditError('');
@@ -109,7 +119,7 @@ const VendorDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!editName.trim() && !editContactNumber.trim() && !editAddress.trim()) {
+    if (!editName.trim() && !editContactNumber.trim() && !editAddress.trim() && !editGender && !photoFile) {
       setEditError('Please fill atleast one of the fields.');
       return;
     }
@@ -119,11 +129,13 @@ const VendorDashboard = () => {
       const nameChanged = editName.trim() !== (storeProfile?.full_name || '');
       const addressChanged = editAddress.trim() !== (storeProfile?.address || '');
       const contactPhoneChanged = editContactNumber.trim() !== (storeProfile?.contact_phone || '');
-      if (nameChanged || addressChanged || contactPhoneChanged) {
+      const genderChanged = editGender !== (storeProfile?.gender || '');
+      if (nameChanged || addressChanged || contactPhoneChanged || genderChanged) {
         await updateBasicInfo({
           full_name: editName.trim(),
           address: editAddress,
           contact_phone: editContactNumber,
+          gender: editGender || null,
         });
       }
       if (photoFile) {
@@ -152,8 +164,7 @@ const VendorDashboard = () => {
           businessCount={vendor_business?.length || 0}
           approvalStatus={approvalStatus}
           onNavigateToTab={(tab) => {
-            if (tab === 'settings') openEditModal();
-            else setActiveTab(tab);
+            setActiveTab(tab);
           }}
           onAddBusiness={handleAddBusiness}
         />
@@ -211,6 +222,9 @@ const VendorDashboard = () => {
           onAddBusiness={handleAddBusiness}
         />
       </div>
+      <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>
+        <SettingsTab onEditAccount={openEditModal} />
+      </div>
     </>
   );
 
@@ -219,13 +233,7 @@ const VendorDashboard = () => {
       {/* ── Left Sidebar ── */}
       <VendorSidebar
         activeTab={activeTab}
-        onTabChange={(tab) => {
-          if (tab === 'settings') {
-            openEditModal();
-          } else {
-            setActiveTab(tab);
-          }
-        }}
+        onTabChange={setActiveTab}
         businessCount={vendor_business?.length || 0}
         onAddBusiness={handleAddBusiness}
         isOpen={mobileSidebarOpen}
@@ -412,7 +420,7 @@ const VendorDashboard = () => {
                   Contact Number
                 </label>
                 <input
-                  type="number"
+                  type="tel"
                   value={editContactNumber}
                   onChange={(e) => setEditContactNumber(e.target.value)}
                   placeholder="Enter contact number"
@@ -424,6 +432,26 @@ const VendorDashboard = () => {
                   onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
                   onBlur={(e) => { e.target.style.borderColor = '#1D4ED8'; }}
                 />
+                <label className="block text-xs font-semibold mb-1.5" style={{ color: '#9FB5F5' }}>
+                  Gender
+                </label>
+                <select
+                  value={editGender}
+                  onChange={(e) => setEditGender(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-lg text-sm outline-none transition-all text-white"
+                  style={{ background: '#081C49', border: '1px solid #1D4ED8' }}
+                  onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#1D4ED8'; }}
+                >
+                  {editGender && !GENDER_OPTIONS.some((option) => option.value === editGender) && (
+                    <option value={editGender}>{editGender.replace(/[_-]/g, ' ')}</option>
+                  )}
+                  {GENDER_OPTIONS.map((option) => (
+                    <option key={option.value || 'unspecified'} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Error */}

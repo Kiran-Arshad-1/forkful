@@ -52,6 +52,9 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     setDraftBusinessProfile,
     isCreatingBusiness,
     setIsCreatingBusiness,
+    isEditingBusiness,
+    setIsEditingBusiness,
+    selectedBusinessId,
     startCreateBusiness,
     cancelCreateBusiness,
   } = useVendorProfileStore();
@@ -66,8 +69,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     lat: '',
     lng: '',
     phone: '',
-    whatsapp: '',
-    instagram: '',
+    email: '',
+    website: '',
   });
   const [hours, setHours] = useState(defaultHours);
   const [errors, setErrors] = useState({});
@@ -113,7 +116,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
 
   ('got all business from auth ', vendor_business);
 
-  // Hydrate local form state when the store profile loads
+  // Hydrate local form state when the store profile loads or when editing an existing business
   useEffect(() => {
     if (isOnboarding) {
       if (draftBusinessProfile) {
@@ -129,8 +132,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
           lat: '',
           lng: '',
           phone: '',
-          whatsapp: '',
-          instagram: '',
+          email: profile?.email ?? user?.email ?? '',
+          website: '',
         };
         setForm(cleanForm);
         setHours(defaultHours);
@@ -139,6 +142,28 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
       setDataLoading(false);
       return;
     }
+
+    if (isEditingBusiness && Array.isArray(vendor_business)) {
+      const selectedBiz = vendor_business.find((b) => b.id === selectedBusinessId);
+      if (selectedBiz) {
+        setForm({
+          businessName: selectedBiz.name ?? '',
+          description: selectedBiz.description ?? '',
+          cuisineType: selectedBiz.category ?? 'Bajan',
+          parish: selectedBiz.parish ?? 'st_michael',
+          address: selectedBiz.address ?? '',
+          lat: selectedBiz.latitude != null ? String(selectedBiz.latitude) : '',
+          lng: selectedBiz.longitude != null ? String(selectedBiz.longitude) : '',
+          phone: selectedBiz.phone ?? '',
+          email: selectedBiz.email ?? '',
+          website: selectedBiz.website ?? '',
+        });
+        setHours(savedHours || defaultHours);
+        setDataLoading(false);
+        return;
+      }
+    }
+
     if (!profile) return;
     setForm({
       businessName: profile?.business_name ?? '',
@@ -149,12 +174,12 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
       lat: profile?.latitude != null ? String(profile?.latitude) : '',
       lng: profile?.longitude != null ? String(profile?.longitude) : '',
       phone: profile?.phone ?? '',
-      whatsapp: profile?.whatsapp ?? '',
-      instagram: profile?.instagram ?? '',
+      email: profile?.email ?? user?.email ?? '',
+      website: '',
     });
     setHours(savedHours);
     setDataLoading(false);
-  }, [profile?.vendor_id, draftBusinessProfile, isOnboarding, savedHours]);
+  }, [profile?.vendor_id, draftBusinessProfile, isOnboarding, isEditingBusiness, selectedBusinessId, vendor_business, savedHours]);
 
   // Load Leaflet CSS + JS dynamically
   useEffect(() => {
@@ -183,7 +208,15 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     if (leafletMapRef.current) return;
 
     initMap();
-  }, [mapRef.current, isCreatingBusiness])
+  }, [mapRef.current, isCreatingBusiness, isEditingBusiness]);
+
+  useEffect(() => {
+    if (!isCreatingBusiness && !isEditingBusiness && leafletMapRef.current) {
+      leafletMapRef.current.remove();
+      leafletMapRef.current = null;
+      markerRef.current = null;
+    }
+  }, [isCreatingBusiness, isEditingBusiness]);
 
   const initMap = useCallback(() => {
     if (!mapRef?.current || leafletMapRef?.current) return;
@@ -209,8 +242,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
     const pinIcon = L?.divIcon({
       html: `<div style="width:28px;height:36px;position:relative;">
         <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
-          <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#C9A84C"/>
-          <circle cx="14" cy="14" r="6" fill="#0F1A5C"/>
+          <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/>
+          <circle cx="14" cy="14" r="6" fill="#061538"/>
         </svg>
       </div>`,
       className: '',
@@ -251,8 +284,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
           const pinIcon = L?.divIcon({
             html: `<div style="width:28px;height:36px;position:relative;">
               <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
-                <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#C9A84C"/>
-                <circle cx="14" cy="14" r="6" fill="#0F1A5C"/>
+                <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/>
+                <circle cx="14" cy="14" r="6" fill="#061538"/>
               </svg>
             </div>`,
             className: '',
@@ -380,7 +413,12 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
       ('sending the form to save', form, hours);
       await saveBusinessProfile(form, hours);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => {
+        setSaved(false);
+        if (isEditingBusiness) {
+          setIsEditingBusiness(false);
+        }
+      }, 1200);
     } catch (err) {
       setSaveError(err?.message || 'Failed to save. Please try again.');
     } finally {
@@ -392,7 +430,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
 
   return (
     <>
-      {!isCreatingBusiness ? (
+      {!isCreatingBusiness && !isEditingBusiness ? (
         hasBusiness ? (
           <BusinessDropdown />
         ) : (
@@ -414,7 +452,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
             </p>
             <button
               onClick={() => startCreateBusiness()}
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 active:scale-95 shadow-lg cursor-pointer"
               style={{ background: '#FBC33B', color: '#061538' }}
             >
               <Icon name="Plus" size={18} color="#061538" strokeWidth={2.5} />
@@ -425,71 +463,114 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
       ) : (
 
         <div className="space-y-6 lg:space-y-8">
+          {/* Edit Header Banner */}
+          {isEditingBusiness && (
+            <div
+              className="flex items-center justify-between p-4 md:p-5 rounded-2xl"
+              style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="p-2.5 rounded-xl flex items-center justify-center flex-shrink-0"
+                  style={{ background: '#3C351E', border: '1px solid #FBC33B' }}
+                >
+                  <Icon name="Edit" size={20} color="#FBC33B" />
+                </div>
+                <div>
+                  <h2 className="font-heading text-lg font-bold text-white">
+                    Edit Business Profile
+                  </h2>
+                  <p className="text-xs" style={{ color: '#9FB5F5' }}>
+                    Updating information for <span className="font-semibold text-white">{form?.businessName || 'Business'}</span>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEditingBusiness(false)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold hover:bg-white/10 transition-all cursor-pointer"
+                style={{ color: '#9FB5F5', border: '1px solid #254477' }}
+              >
+                <Icon name="X" size={14} />
+                Cancel
+              </button>
+            </div>
+          )}
+
           {/* Approval Status Banner */}
-          {approvalStatus === 'approved' && (
-            <div className="flex items-start gap-3 p-4 rounded-lg" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.4)' }}>
-              <Icon name="CheckCircle" size={18} color="#10B981" className="flex-shrink-0 mt-0.5" />
+          {approvalStatus === 'approved' && !isEditingBusiness && (
+            <div className="flex items-start gap-3 p-4 rounded-xl" style={{ background: 'rgba(16,214,160,0.12)', border: '1px solid #10D6A0' }}>
+              <Icon name="CheckCircle" size={18} color="#10D6A0" className="flex-shrink-0 mt-0.5" />
               <div>
-                <p className="text-sm font-semibold" style={{ color: '#10B981' }}>Profile Approved &amp; Live</p>
-                <p className="text-xs mt-0.5" style={{ color: '#9BA4E8' }}>Your business is visible to customers on ForkFul.</p>
+                <p className="text-sm font-semibold" style={{ color: '#10D6A0' }}>Profile Approved &amp; Live</p>
+                <p className="text-xs mt-0.5" style={{ color: '#9FB5F5' }}>Your business is visible to customers on ForkFul.</p>
               </div>
             </div>
           )}
+
           {/* Basic Info */}
-          <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Basic Information</h3>
+          <div className="rounded-2xl p-5 md:p-6" style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}>
+            <h3 className="font-heading text-lg font-semibold mb-4 text-white">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
-                  Business Name <span style={{ color: '#F87171' }}>*</span>
+                <label className="block text-sm font-medium mb-1 text-white">
+                  Business Name <span style={{ color: '#FF4D5E' }}>*</span>
                 </label>
                 <input
                   type="text"
                   value={form?.businessName}
                   onChange={e => handleChange('businessName', e?.target.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg outline-none transition-all duration-250"
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all text-white placeholder:text-[#647DBA]"
                   style={{
-                    background: '#0F1A5C',
-                    border: errors?.businessName ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)',
+                    background: '#081C49',
+                    border: errors?.businessName ? '1px solid #FF4D5E' : '1px solid #1D4ED8',
                     color: '#FFFFFF',
                   }}
+                  onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                  onBlur={(e) => { e.target.style.borderColor = errors?.businessName ? '#FF4D5E' : '#1D4ED8'; }}
                 />
-                {errors?.businessName && <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors?.businessName}</p>}
+                {errors?.businessName && <p className="text-xs mt-1 font-medium" style={{ color: '#FF4D5E' }}>{errors?.businessName}</p>}
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>
-                  Description <span style={{ color: '#F87171' }}>*</span>
+                <label className="block text-sm font-medium mb-1 text-white">
+                  Description <span style={{ color: '#FF4D5E' }}>*</span>
                 </label>
                 <textarea
                   value={form?.description}
                   onChange={e => handleChange('description', e?.target?.value)}
                   placeholder="Describe your business, specialties, and what makes you unique..."
                   rows={4}
-                  className="w-full px-3 py-2 text-sm rounded-lg resize-none outline-none transition-all duration-250"
-                  style={{ background: '#0F1A5C', border: errors?.description ? '1px solid #F87171' : '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl resize-none outline-none transition-all text-white placeholder:text-[#647DBA]"
+                  style={{
+                    background: '#081C49',
+                    border: errors?.description ? '1px solid #FF4D5E' : '1px solid #1D4ED8',
+                    color: '#FFFFFF',
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = '#FBC33B'; }}
+                  onBlur={(e) => { e.target.style.borderColor = errors?.description ? '#FF4D5E' : '#1D4ED8'; }}
                 />
-                {errors?.description && <p className="text-xs mt-1" style={{ color: '#F87171' }}>{errors?.description}</p>}
+                {errors?.description && <p className="text-xs mt-1 font-medium" style={{ color: '#FF4D5E' }}>{errors?.description}</p>}
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>Cuisine / Food Type</label>
+                <label className="block text-sm font-medium mb-1 text-white">Cuisine / Food Type</label>
                 <select
                   value={form?.cuisineType}
                   onChange={e => handleChange('cuisineType', e?.target?.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg outline-none transition-all duration-250"
-                  style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all text-white cursor-pointer"
+                  style={{ background: '#081C49', border: '1px solid #1D4ED8', color: '#FFFFFF' }}
                 >
-                  {CUISINE_TYPES?.map(c => <option key={c} value={c} style={{ background: '#0F1A5C' }}>{c}</option>)}
+                  {CUISINE_TYPES?.map(c => <option key={c} value={c} style={{ background: '#081C49', color: '#FFFFFF' }}>{c}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#FFFFFF' }}>Parish</label>
+                <label className="block text-sm font-medium mb-1 text-white">Parish</label>
                 <select
                   value={form?.parish}
                   onChange={e => handleChange('parish', e?.target?.value)}
-                  className="w-full px-3 py-2 text-sm rounded-lg outline-none transition-all duration-250"
-                  style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                  className="w-full px-3.5 py-2.5 text-sm rounded-xl outline-none transition-all text-white cursor-pointer"
+                  style={{ background: '#081C49', border: '1px solid #1D4ED8', color: '#FFFFFF' }}
                 >
-                  {PARISHES?.map(p => <option key={p?.value} value={p?.value} style={{ background: '#0F1A5C' }}>{p?.label}</option>)}
+                  {PARISHES?.map(p => <option key={p?.value} value={p?.value} style={{ background: '#081C49', color: '#FFFFFF' }}>{p?.label}</option>)}
                 </select>
               </div>
               <div className="md:col-span-2">
@@ -502,16 +583,17 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                   error={errors?.address}
                   required
                 />
-                <p className="text-xs mt-1.5" style={{ color: '#9BA4E8' }}>
+                <p className="text-xs mt-1.5" style={{ color: '#9FB5F5' }}>
                   Your address will be shown on your listing, but the map pin controls your exact location.
                 </p>
               </div>
             </div>
           </div>
+
           {/* Map Location */}
-          <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <h3 className="font-heading text-lg font-semibold mb-1" style={{ color: '#FFFFFF' }}>Map Location</h3>
-            <p className="text-xs mb-4" style={{ color: '#9BA4E8' }}>
+          <div className="rounded-2xl p-5 md:p-6" style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}>
+            <h3 className="font-heading text-lg font-semibold mb-1 text-white">Map Location</h3>
+            <p className="text-xs mb-4" style={{ color: '#9FB5F5' }}>
               Place the pin at your exact business location for the best results.
             </p>
 
@@ -521,8 +603,8 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                 type="button"
                 onClick={handleUseCurrentLocation}
                 disabled={geoLoading}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-200 active:scale-95 disabled:opacity-60"
-                style={{ background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.5)', color: '#C9A84C' }}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 active:scale-95 disabled:opacity-60 cursor-pointer"
+                style={{ background: '#3C351E', border: '1px solid #FBC33B', color: '#FBC33B' }}
               >
                 {geoLoading ? (
                   <>
@@ -533,14 +615,14 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                   </>
                 ) : (
                   <>
-                    <Icon name="LocateFixed" size={16} color="#C9A84C" />
+                    <Icon name="LocateFixed" size={16} color="#FBC33B" />
                     Use Current Location
                   </>
                 )}
               </button>
               {geoMessage && (
-                <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: '#9BA4E8' }}>
-                  <Icon name="Info" size={13} color="#9BA4E8" className="flex-shrink-0 mt-0.5" />
+                <p className="text-xs mt-2 flex items-start gap-1.5" style={{ color: '#9FB5F5' }}>
+                  <Icon name="Info" size={13} color="#9FB5F5" className="flex-shrink-0 mt-0.5" />
                   {geoMessage}
                 </p>
               )}
@@ -549,11 +631,11 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
             {/* Interactive Map */}
             <div
               ref={mapRef}
-              className="w-full rounded-lg overflow-hidden mb-4"
-              style={{ height: '280px', border: '1px solid rgba(201,168,76,0.3)', cursor: 'crosshair' }}
+              className="w-full rounded-xl overflow-hidden mb-4"
+              style={{ height: '280px', border: '1px solid #1D4ED8', cursor: 'crosshair' }}
             />
-            <p className="text-xs mb-4 flex items-center gap-1.5" style={{ color: '#9BA4E8' }}>
-              <Icon name="MousePointerClick" size={13} color="#9BA4E8" />
+            <p className="text-xs mb-4 flex items-center gap-1.5" style={{ color: '#9FB5F5' }}>
+              <Icon name="MousePointerClick" size={13} color="#9FB5F5" />
               Tap or click the map to place your pin. Drag the pin to fine-tune your exact location.
             </p>
 
@@ -572,7 +654,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                     if (!isNaN(lat) && !isNaN(lng) && leafletMapRef?.current) {
                       const L = window.L;
                       const pinIcon = L?.divIcon({
-                        html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#C9A84C"/><circle cx="14" cy="14" r="6" fill="#0F1A5C"/></svg></div>`,
+                        html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/><circle cx="14" cy="14" r="6" fill="#061538"/></svg></div>`,
                         className: '', iconSize: [28, 36], iconAnchor: [14, 36],
                       });
                       placeOrMoveMarker(lat, lng, leafletMapRef?.current, pinIcon);
@@ -596,7 +678,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                     if (!isNaN(lat) && !isNaN(lng) && leafletMapRef?.current) {
                       const L = window.L;
                       const pinIcon = L?.divIcon({
-                        html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#C9A84C"/><circle cx="14" cy="14" r="6" fill="#0F1A5C"/></svg></div>`,
+                        html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/><circle cx="14" cy="14" r="6" fill="#061538"/></svg></div>`,
                         className: '', iconSize: [28, 36], iconAnchor: [14, 36],
                       });
                       placeOrMoveMarker(lat, lng, leafletMapRef?.current, pinIcon);
@@ -608,37 +690,39 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                 />
               </div>
             </div>
-            <p className="text-xs mt-2" style={{ color: '#9BA4E8' }}>
+            <p className="text-xs mt-2" style={{ color: '#9FB5F5' }}>
               Coordinates are set automatically by the map pin. You can also type them directly if needed.
             </p>
           </div>
+
           {/* Contact */}
-          <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Contact Details</h3>
+          <div className="rounded-2xl p-5 md:p-6" style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}>
+            <h3 className="font-heading text-lg font-semibold mb-4 text-white">Contact Details</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Input label="Phone Number" type="tel" value={form?.phone} onChange={e => handleChange('phone', e?.target?.value)} placeholder="+1 (246) 555-0000" error={errors?.phone} required />
-              <Input label="WhatsApp Number" type="tel" value={form?.whatsapp} onChange={e => handleChange('whatsapp', e?.target?.value)} placeholder="+1 (246) 555-0000" />
-              <Input label="Instagram Handle" type="text" value={form?.instagram} onChange={e => handleChange('instagram', e?.target?.value)} placeholder="@yourbusiness" />
+              <Input label="Business Email" type="email" value={form?.email} onChange={e => handleChange('email', e?.target?.value)} placeholder="hello@yourbusiness.com" />
+              <Input label="Website" type="url" value={form?.website} onChange={e => handleChange('website', e?.target?.value)} placeholder="https://yourbusiness.com" />
             </div>
           </div>
+
           {/* Opening Hours */}
-          <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
-            <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Opening Hours</h3>
+          <div className="rounded-2xl p-5 md:p-6" style={{ background: '#0D2F83', border: '1px solid #1D4ED8' }}>
+            <h3 className="font-heading text-lg font-semibold mb-4 text-white">Opening Hours</h3>
             <div className="space-y-3">
               {DAYS?.map(day => (
-                <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2" style={{ borderBottom: '1px solid rgba(201,168,76,0.15)' }}>
+                <div key={day} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2" style={{ borderBottom: '1px solid #254477' }}>
                   <div className="w-28 flex-shrink-0">
-                    <span className="text-sm font-medium" style={{ color: '#FFFFFF' }}>{day}</span>
+                    <span className="text-sm font-medium text-white">{day}</span>
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={hours?.[day]?.closed}
                       onChange={e => handleHoursChange(day, 'closed', e?.target?.checked)}
-                      className="w-4 h-4"
-                      style={{ accentColor: '#C9A84C' }}
+                      className="w-4 h-4 cursor-pointer"
+                      style={{ accentColor: '#FBC33B' }}
                     />
-                    <span className="text-xs" style={{ color: '#9BA4E8' }}>Closed</span>
+                    <span className="text-xs" style={{ color: '#9FB5F5' }}>Closed</span>
                   </label>
                   {!hours?.[day]?.closed && (
                     <div className="flex items-center gap-2 flex-1">
@@ -646,71 +730,81 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
                         type="time"
                         value={hours?.[day]?.open}
                         onChange={e => handleHoursChange(day, 'open', e?.target?.value)}
-                        className="px-2 py-1.5 text-sm rounded-md outline-none"
-                        style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                        className="px-2.5 py-1.5 text-sm rounded-lg outline-none text-white"
+                        style={{ background: '#081C49', border: '1px solid #1D4ED8' }}
                       />
-                      <span className="text-xs" style={{ color: '#9BA4E8' }}>to</span>
+                      <span className="text-xs" style={{ color: '#9FB5F5' }}>to</span>
                       <input
                         type="time"
                         value={hours?.[day]?.close}
                         onChange={e => handleHoursChange(day, 'close', e?.target?.value)}
-                        className="px-2 py-1.5 text-sm rounded-md outline-none"
-                        style={{ background: '#0F1A5C', border: '1px solid rgba(201,168,76,0.3)', color: '#FFFFFF' }}
+                        className="px-2.5 py-1.5 text-sm rounded-lg outline-none text-white"
+                        style={{ background: '#081C49', border: '1px solid #1D4ED8' }}
                       />
                     </div>
                   )}
                   {hours?.[day]?.closed && (
-                    <span className="text-xs italic" style={{ color: '#9BA4E8' }}>Closed all day</span>
+                    <span className="text-xs italic" style={{ color: '#9FB5F5' }}>Closed all day</span>
                   )}
                 </div>
               ))}
             </div>
           </div>
-          {/* Save */}
-          {/* Save */}
+
+          {/* Action Buttons */}
           <div className="flex items-center justify-end gap-3 pb-4">
             {isOnboarding ? (
               <>
                 {hasBusiness && (
                   <button
                     onClick={() => cancelCreateBusiness()}
-                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:bg-white/10"
-                    style={{ border: '1px solid rgba(201,168,76,0.3)', color: '#9BA4E8' }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10 cursor-pointer"
+                    style={{ border: '1px solid #254477', color: '#9FB5F5' }}
                   >
                     Cancel
                   </button>
                 )}
                 <button
                   onClick={handleNextStep}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-250 hover:opacity-90 shadow-lg"
-                  style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 shadow-lg cursor-pointer"
+                  style={{ background: '#FBC33B', color: '#061538' }}
                 >
                   Next: Configure Menu
-                  <Icon name="ArrowRight" size={16} color="#0F1A5C" />
+                  <Icon name="ArrowRight" size={16} color="#061538" />
                 </button>
               </>
             ) : (
               <>
+                {isEditingBusiness && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingBusiness(false)}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all hover:bg-white/10 cursor-pointer"
+                    style={{ border: '1px solid #254477', color: '#9FB5F5' }}
+                  >
+                    Cancel
+                  </button>
+                )}
                 {saveError && (
-                  <span className="flex items-center gap-1.5 text-sm" style={{ color: '#F87171' }}>
-                    <Icon name="AlertCircle" size={16} color="#F87171" />
+                  <span className="flex items-center gap-1.5 text-sm font-medium" style={{ color: '#FF4D5E' }}>
+                    <Icon name="AlertCircle" size={16} color="#FF4D5E" />
                     {saveError}
                   </span>
                 )}
                 {saved && (
-                  <span className="flex items-center gap-1.5 text-sm" style={{ color: '#10B981' }}>
-                    <Icon name="CheckCircle" size={16} color="#10B981" />
+                  <span className="flex items-center gap-1.5 text-sm font-semibold" style={{ color: '#10D6A0' }}>
+                    <Icon name="CheckCircle" size={16} color="#10D6A0" />
                     Changes saved!
                   </span>
                 )}
                 <button
                   disabled={saving}
                   onClick={handleSave}
-                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-lg font-bold text-sm transition-all duration-250 hover:opacity-90 disabled:opacity-50"
-                  style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                  className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 hover:brightness-110 disabled:opacity-50 shadow-md cursor-pointer"
+                  style={{ background: '#FBC33B', color: '#061538' }}
                 >
-                  <Icon name="Save" size={16} color="#0F1A5C" />
-                  {saving ? 'Saving...' : 'Save Profile'}
+                  <Icon name="Save" size={16} color="#061538" />
+                  {saving ? 'Saving...' : (isEditingBusiness ? 'Save Changes' : 'Save Profile')}
                 </button>
               </>
             )}
@@ -718,7 +812,7 @@ const BusinessProfileTab = ({ approvalStatus, isOnboarding, onNext }) => {
         </div>
       )}
     </>
-  )
+  );
 };
 
 export default BusinessProfileTab;

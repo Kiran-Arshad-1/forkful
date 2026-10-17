@@ -24,23 +24,31 @@ const TabHeroHeader = ({
 
   const description = business?.description?.trim() || null;
 
-  // Real status from database
-  const isApproved = business?.status === 'active' || business?.approval_status === 'approved';
+  const rawStatus = business?.status || business?.approval_status || 'pending';
+  const isApproved = rawStatus === 'active' || rawStatus === 'approved';
+  const isBlocked = rawStatus === 'blocked' || rawStatus === 'rejected';
+  const status = isApproved
+    ? { label: 'Approved & Live', color: '#10D6A0', background: 'rgba(16, 214, 160, 0.15)' }
+    : isBlocked
+      ? { label: rawStatus === 'rejected' ? 'Changes Required' : 'Blocked', color: '#FF6B79', background: 'rgba(255, 107, 121, 0.15)' }
+      : { label: 'Pending Review', color: '#FBBF24', background: 'rgba(251, 191, 36, 0.15)' };
 
   return (
     <div className="w-full space-y-4">
       {/* Top Breadcrumb */}
-      <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#9FB5F5' }}>
-        <button
-          onClick={onBackToBusinesses}
-          className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
-        >
-          <Icon name="ChevronLeft" size={14} color="#9FB5F5" />
-          <span>Back to Businesses</span>
-        </button>
-        <span style={{ color: '#254477' }}>|</span>
-        <span className="text-white font-semibold truncate max-w-xs">{businessName}</span>
-      </div>
+      {onBackToBusinesses && (
+        <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#9FB5F5' }}>
+          <button
+            onClick={onBackToBusinesses}
+            className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer"
+          >
+            <Icon name="ChevronLeft" size={14} color="#9FB5F5" />
+            <span>Back to Businesses</span>
+          </button>
+          <span style={{ color: '#254477' }}>|</span>
+          <span className="text-white font-semibold truncate max-w-xs">{businessName}</span>
+        </div>
+      )}
 
       {/* Hero Banner Card */}
       <div
@@ -97,16 +105,16 @@ const TabHeroHeader = ({
               <div
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
                 style={{
-                  background: isApproved ? 'rgba(16, 214, 160, 0.15)' : 'rgba(251, 191, 36, 0.15)',
-                  border: isApproved ? '1px solid #10D6A0' : '1px solid #FBBF24',
-                  color: isApproved ? '#10D6A0' : '#FBBF24',
+                  background: status.background,
+                  border: `1px solid ${status.color}`,
+                  color: status.color,
                 }}
               >
                 <div
                   className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: isApproved ? '#10D6A0' : '#FBBF24' }}
+                  style={{ background: status.color }}
                 />
-                <span>{isApproved ? 'Approved & Live' : 'Pending Review'}</span>
+                <span>{status.label}</span>
               </div>
 
               {/* Title & Verified Checkmark */}
