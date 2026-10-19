@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Icon from 'components/AppIcon';
+import { formatMenuItemPrice, getMenuItemImages } from 'components/business/BusinessMenuList';
 
 const MenuItemCard = ({
   item,
@@ -28,13 +29,7 @@ const MenuItemCard = ({
   }, [showMenuDropdown]);
 
   // Real image handling from menu_items table (image_url text[] or image_path text[])
-  const displayImages = Array.isArray(item.images)
-    ? item.images.map((img) => (img.isExisting ? img.url : img.preview || '')).filter(Boolean)
-    : Array.isArray(item.image_url)
-      ? item.image_url.filter(Boolean)
-      : typeof item.image_url === 'string' && item.image_url.trim()
-        ? [item.image_url.trim()]
-        : [];
+  const displayImages = getMenuItemImages(item);
 
   // Keyboard navigation for Lightbox Gallery (Esc, Left/Right arrow keys)
   useEffect(() => {
@@ -64,7 +59,7 @@ const MenuItemCard = ({
     : null;
 
   const isAvailable = item.is_available !== false;
-  const priceFormatted = parseFloat(item.price ?? 0).toFixed(2);
+  const priceFormatted = formatMenuItemPrice(item.price).replace('BDS$ ', '');
 
   const handleNextImage = (e) => {
     e.stopPropagation();

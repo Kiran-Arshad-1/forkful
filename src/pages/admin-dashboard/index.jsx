@@ -7,14 +7,11 @@ import Icon from 'components/AppIcon';
 
 
 import MetricsPanel from './components/MetricsPanel';
-import PhotoApprovalsPanel from './components/PhotoApprovalsPanel';
 
-import VendorDetailModal from './components/VendorDetailModal';
 import VendorFilters from './components/VendorFilters';
 import VendorTable from './components/VendorTable';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import AdminBusinessesList from './AdminBusinessesList';
-import BusinessDetailsModal from './components/BusinessDetailsModal';
 import ReviewsPanel from './components/ReviewsPanel';
 import TrailsPanel from './components/TrailsPanel';
 import {
@@ -25,7 +22,7 @@ import {
 } from '../../services/trailService';
 
 const mapProfile = (p) => ({
-  id: p.id,
+  id: p.id || p.vendor_id,
   vendor_id: p.vendor_id,
   businessName: p.business_name || '',
   ownerName: p.full_name || '',
@@ -39,9 +36,12 @@ const mapProfile = (p) => ({
   description: p.description || '',
   approvalStatus: p.approval_status,
   subscriptionStatus: p.subscription_tier || "",
+  subscriptionExpiresAt: p.subscription_expires_at || null,
   submittedDate: p.created_at
     ? new Date(p.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
     : '',
+  submittedAt: p.created_at || null,
+  updated_at: p.updated_at || null,
   photo: p.profile_img_url || '',
   photoAlt: p.business_name || '',
   is_listed: p.is_listed,
@@ -52,7 +52,6 @@ const mapProfile = (p) => ({
 
 const SECTIONS = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: 'LayoutDashboard' },
-  { id: 'photo-approvals', label: 'Photo Approvals', shortLabel: 'Photos', icon: 'Camera' },
   { id: 'vendors', label: 'All Vendors', shortLabel: 'Vendors', icon: 'Store' },
   { id: 'subscriptions', label: 'Subscriptions', shortLabel: 'Billing', icon: 'CreditCard' },
   { id: 'businesses', label: 'Businesses', shortLabel: 'Businesses', icon: 'Store' },
@@ -93,19 +92,9 @@ const AdminDashboard = () => {
   const [trailsLoading, setTrailsLoading] = useState(false);
   const [trailsError, setTrailsError] = useState('');
 
-  const [pendingPhotosCount, setPendingPhotosCount] = useState(0);
-
-  const [isBusinessModalOpen, setIsBusinessModalOpen] = useState(false);
-  const [selectedBusiness, setSelectedBusiness] = useState(null);
-  const [detailVendor, setDetailVendor] = useState(null);
-  const [highlightedBusinessId, setHighlightedBusinessId] = useState(null);
   const [toast, setToast] = useState(null);
 
-  const handleSelectBusinessFromVendorModal = (business) => {
-    setDetailVendor(null);
-    setHighlightedBusinessId(business?.id);
-    setActiveSection('businesses');
-  };
+  const handleViewVendor = (vendor) => navigate(`/admin-dashboard/vendors/${vendor.vendor_id || vendor.id}`);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -118,10 +107,7 @@ const AdminDashboard = () => {
       .from('vendor_profiles')
       .select('*')
       .order('created_at', { ascending: false });
-    console.log('raw data from api', data);
-
     if (!error && data) setVendors(data.map(mapProfile));
-    console.log('data after map', data.map(mapProfile));
 
     setVendorsLoading(false);
   }, []);
@@ -280,8 +266,7 @@ const AdminDashboard = () => {
   };
 
   const handleViewDetail = (business) => {
-    setSelectedBusiness(business);
-    setIsBusinessModalOpen(true);
+    navigate(`/admin-dashboard/businesses/${business.id}`);
   };
 
   // Filtered vendors based on section
@@ -326,35 +311,11 @@ const AdminDashboard = () => {
     if (error) { showToast(`Error: ${error.message}`); return; }
 
     setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, status: 'active' } : b));
-    setIsBusinessModalOpen(false);
     showToast(`${business?.name || 'Business'} approved successfully.`);
 
     if (vendorEmail) {
       supabase.functions.invoke('send-email', {
         body: { to: vendorEmail, businessName: business?.name, type: 'vendor_approved' },
-      });
-    }
-  };
-
-  const handleBusinessReject = async (businessId, reason) => {
-    const business = businesses.find(b => b.id === businessId);
-    const vendorEmail = vendors.find(v => v.vendor_id === business?.owner_id)?.email;
-    ('thse are all vendrs', vendorEmail);
-
-    const { error } = await supabase
-      .from('vendors_businesses')
-      .update({ status: 'blocked' })
-      .eq('id', businessId);
-
-    if (error) { showToast(`Error: ${error.message}`); return; }
-
-    setBusinesses(prev => prev.map(b => b.id === businessId ? { ...b, status: 'blocked' } : b));
-    setIsBusinessModalOpen(false);
-    showToast(`${business?.name || 'Business'} rejected.`);
-
-    if (vendorEmail) {
-      supabase.functions.invoke('send-email', {
-        body: { to: vendorEmail, businessName: business?.name, type: 'vendor_rejected', reason },
       });
     }
   };
@@ -367,10 +328,6 @@ const AdminDashboard = () => {
 
     // Optimistic update — only the matching row changes
     setVendors((prev) => prev.map((v) => v.vendor_id === vendorId ? { ...v, approvalStatus: newStatus } : v));
-    if (detailVendor?.vendor_id === vendorId) {
-      setDetailVendor((prev) => prev ? { ...prev, approvalStatus: newStatus } : null);
-    }
-
     const { error } = await supabase
       .from('vendor_profiles')
       .update({ approval_status: newStatus })
@@ -380,9 +337,6 @@ const AdminDashboard = () => {
       showToast(`Error: ${error.message}`);
       // Rollback
       setVendors((prev) => prev.map((v) => v.vendor_id === vendorId ? { ...v, approvalStatus: currentlyActive ? 'active' : 'block' } : v));
-      if (detailVendor?.vendor_id === vendorId) {
-        setDetailVendor((prev) => prev ? { ...prev, approvalStatus: currentlyActive ? 'active' : 'block' } : null);
-      }
       return;
     }
 
@@ -429,7 +383,6 @@ const AdminDashboard = () => {
               <h1 className="font-heading font-bold text-2xl" style={{ color: '#FFFFFF' }}>
                 {activeSection === 'overview' && 'Dashboard Overview'}
                 {activeSection === 'approvals' && `Vendor Approvals ${pendingCount > 0 ? `(${pendingCount} pending)` : ''}`}
-                {activeSection === 'photo-approvals' && `Photo Approvals ${pendingPhotosCount > 0 ? `(${pendingPhotosCount} pending)` : ''}`}
                 {activeSection === 'vendors' && 'All Vendors'}
                 {activeSection === 'subscriptions' && 'Subscription Management'}
                 {activeSection === 'businesses' && 'Businesses'}
@@ -441,15 +394,6 @@ const AdminDashboard = () => {
               </p>
             </div>
             <div className="flex items-center gap-3">
-              {pendingPhotosCount > 0 && activeSection !== 'photo-approvals' &&
-                <button
-                  onClick={() => setActiveSection('photo-approvals')}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all"
-                  style={{ background: 'rgba(155,164,232,0.15)', border: '1px solid rgba(155,164,232,0.4)', color: '#9BA4E8' }}>
-                  <Icon name="Camera" size={16} color="#9BA4E8" />
-                  {pendingPhotosCount} photo{pendingPhotosCount > 1 ? 's' : ''} pending
-                </button>
-              }
               {pendingCount > 0 && activeSection !== 'approvals' &&
                 <button
                   onClick={() => setActiveSection('approvals')}
@@ -482,11 +426,6 @@ const AdminDashboard = () => {
                 {s?.id === 'approvals' && pendingCount > 0 &&
                   <span className="ml-1 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#F87171' }}>
                     {pendingCount}
-                  </span>
-                }
-                {s?.id === 'photo-approvals' && pendingPhotosCount > 0 &&
-                  <span className="ml-1 w-5 h-5 rounded-full text-white text-xs flex items-center justify-center font-data" style={{ background: '#9BA4E8' }}>
-                    {pendingPhotosCount}
                   </span>
                 }
               </button>
@@ -569,28 +508,16 @@ const AdminDashboard = () => {
                       style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }} />
                   </div>
                 ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>
-                        Showing <span className="font-semibold" style={{ color: '#FFFFFF' }}>{filteredVendors?.length}</span> vendor{filteredVendors?.length !== 1 ? 's' : ''}
-                      </p>
-                    </div>
-                    <VendorTable
-                      vendors={filteredVendors}
-                      selectedIds={selectedIds}
-                      onToggleSelect={handleToggleSelect}
-                      onToggleSelectAll={handleToggleSelectAll}
-                      onViewDetail={setDetailVendor}
-                      onToggleStatus={handleToggleVendorStatus} />
-                  </>
+                  <VendorTable
+                    vendors={filteredVendors}
+                    selectedIds={selectedIds}
+                    onToggleSelect={handleToggleSelect}
+                    onToggleSelectAll={handleToggleSelectAll}
+                    onViewDetail={handleViewVendor}
+                    onToggleStatus={handleToggleVendorStatus} />
                 )}
               </>
             }
-
-            {/* Always mounted — preserves fetched data across tab switches */}
-            <div style={{ display: activeSection === 'photo-approvals' ? 'block' : 'none' }}>
-              <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
-            </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
             {activeSection === 'reviews' && (
@@ -645,7 +572,6 @@ const AdminDashboard = () => {
                   handleBusinessApprove={handleBusinessApprove}
                   vendors={vendors}
                   handleViewDetail={handleViewDetail}
-                  highlightedBusinessId={highlightedBusinessId}
                 />
               ) : null}
           </div>
@@ -679,14 +605,6 @@ const AdminDashboard = () => {
                         style={{ background: '#F87171' }}
                       >
                         {pendingCount}
-                      </span>
-                    )}
-                    {s?.id === 'photo-approvals' && pendingPhotosCount > 0 && (
-                      <span
-                        className="w-4 h-4 rounded-full text-xs flex items-center justify-center font-data"
-                        style={{ background: '#9BA4E8', color: '#0F1A5C' }}
-                      >
-                        {pendingPhotosCount}
                       </span>
                     )}
                   </button>
@@ -749,16 +667,11 @@ const AdminDashboard = () => {
                     selectedIds={selectedIds}
                     onToggleSelect={handleToggleSelect}
                     onToggleSelectAll={handleToggleSelectAll}
-                    onViewDetail={setDetailVendor}
+                    onViewDetail={handleViewVendor}
                     onToggleStatus={handleToggleVendorStatus} />
                 )}
               </>
             }
-
-            {/* Always mounted — preserves fetched data across tab switches */}
-            <div style={{ display: activeSection === 'photo-approvals' ? 'block' : 'none' }}>
-              <PhotoApprovalsPanel onPendingCountChange={setPendingPhotosCount} />
-            </div>
 
             {activeSection === 'subscriptions' && <SubscriptionPanel />}
             {activeSection === 'reviews' && (
@@ -807,25 +720,9 @@ const AdminDashboard = () => {
             vendors={vendors}
             handleBusinessApprove={handleBusinessApprove}
             handleViewDetail={handleViewDetail}
-            highlightedBusinessId={highlightedBusinessId}
           />}
         </div>
       </main>
-
-      {/* Modals */}
-      <BusinessDetailsModal
-        isOpen={isBusinessModalOpen}
-        onClose={() => setIsBusinessModalOpen(false)}
-        business={selectedBusiness}
-        onApprove={handleBusinessApprove}
-        onReject={handleBusinessReject}
-      />
-
-      <VendorDetailModal
-        vendor={detailVendor}
-        onClose={() => setDetailVendor(null)}
-        onSelectBusiness={handleSelectBusinessFromVendorModal}
-        onToggleStatus={(id, currentlyActive) => { handleToggleVendorStatus(id, currentlyActive); }} />
 
       {/* Toast */}
       {toast &&

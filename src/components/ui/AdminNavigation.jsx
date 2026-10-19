@@ -6,8 +6,8 @@ import useAuthStore from '../../store/authStore';
 
 const NAV_SECTIONS = [
   { id: 'overview', label: 'Overview', icon: 'LayoutDashboard', path: '/admin-dashboard', badge: null },
-  { id: 'vendor-approvals', label: 'Vendor Approvals', icon: 'ClipboardCheck', path: '/admin-dashboard?section=approvals', badge: 7 },
   { id: 'vendors', label: 'All Vendors', icon: 'Store', path: '/admin-dashboard?section=vendors', badge: null },
+  { id: 'businesses', label: 'Businesses', icon: 'Building2', path: '/admin-dashboard?section=businesses', badge: null },
   { id: 'subscriptions', label: 'Subscriptions', icon: 'CreditCard', path: '/admin-dashboard?section=subscriptions', badge: null },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart2', path: '/admin-dashboard?section=analytics', badge: null },
   { id: 'reviews', label: 'Reviews', icon: 'Star', path: '/admin-dashboard?section=reviews', badge: null },

@@ -1,248 +1,103 @@
-import React, { useState } from 'react';
-import { Eye, Check, Image as ImageIcon } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import Icon from 'components/AppIcon';
 import Select from 'components/ui/Select';
 import Input from 'components/ui/Input';
 import Button from 'components/ui/Button';
+import AdminEntityTable from 'components/admin/AdminEntityTable';
+import BusinessStatusBadge from 'components/business/BusinessStatusBadge';
 
 const approvalOptions = [
-    { value: 'all', label: 'All Statuses' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'approved', label: 'Approved' },
-    { value: 'blocked', label: 'Blocked' },
+  { value: 'all', label: 'All Statuses' },
+  { value: 'pending', label: 'Pending' },
+  { value: 'approved', label: 'Approved' },
+  { value: 'blocked', label: 'Blocked' },
 ];
 
+const categoryOptions = ['All Categories', 'Bajan', 'Caribbean', 'Seafood', 'American', 'Chinese', 'Indian', 'Italian', 'Mexican', 'Japanese', 'Thai', 'Mediterranean', 'Fast Food', 'Vegetarian', 'Vegan', 'Bakery', 'Desserts', 'Other']
+  .map((label) => ({ value: label === 'All Categories' ? 'all' : label, label }));
 
-const categoryOptions = [
-    { value: 'all', label: 'All Categories' },
-    { value: 'Bajan', label: 'Bajan' },
-    { value: 'Caribbean', label: 'Caribbean' },
-    { value: 'Seafood', label: 'Seafood' },
-    { value: 'American', label: 'American' },
-    { value: 'Chinese', label: 'Chinese' },
-    { value: 'Indian', label: 'Indian' },
-    { value: 'Italian', label: 'Italian' },
-    { value: 'Mexican', label: 'Mexican' },
-    { value: 'Japanese', label: 'Japanese' },
-    { value: 'Thai', label: 'Thai' },
-    { value: 'Mediterranean', label: 'Mediterranean' },
-    { value: 'Fast Food', label: 'Fast Food' },
-    { value: 'Vegetarian', label: 'Vegetarian' },
-    { value: 'Vegan', label: 'Vegan' },
-    { value: 'Bakery', label: 'Bakery' },
-    { value: 'Desserts', label: 'Desserts' },
-    { value: 'Other', label: 'Other' },
-];
-
-const statusColors = {
-    pending: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30',
-    active: 'bg-green-500/20 text-green-300 border-green-500/30',
-    blocked: 'bg-red-500/20 text-red-300 border-red-500/30',
+const getBusinessImage = (business) => {
+  const first = Array.isArray(business.business_images_urls) ? business.business_images_urls.find(Boolean) : null;
+  return typeof first === 'string' ? first : first?.photo_url || first?.url || '';
 };
 
-export default function AdminBusinessesList({
-    search,
-    onSearch,
-    approvalFilter,
-    onApprovalFilter,
-    categoryFilter,
-    onCategoryFilter,
-    onClearFilters,
-    businesses,
-    vendors,
-    handleBusinessApprove,
-    handleViewDetail,
-    highlightedBusinessId,
-}) {
-    const [selectedIds, setSelectedIds] = useState([]);
+const AdminBusinessesList = ({
+  search,
+  onSearch,
+  approvalFilter,
+  onApprovalFilter,
+  categoryFilter,
+  onCategoryFilter,
+  onClearFilters,
+  businesses = [],
+  vendors = [],
+  handleBusinessApprove,
+  handleViewDetail,
+  highlightedBusinessId,
+}) => {
+  const [selectedIds, setSelectedIds] = useState([]);
 
-    React.useEffect(() => {
-        if (highlightedBusinessId) {
-            const timer = setTimeout(() => {
-                const el = document.getElementById(`business-row-${highlightedBusinessId}`);
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                }
-            }, 100);
-            return () => clearTimeout(timer);
-        }
-    }, [highlightedBusinessId]);
+  const vendorById = useMemo(() => new Map(vendors.map((vendor) => [vendor.vendor_id, vendor])), [vendors]);
+  const filteredBusinesses = useMemo(() => businesses.filter((business) => {
+    const vendorEmail = business.vendorEmail || vendorById.get(business.owner_id)?.email || '';
+    const query = String(search || '').toLowerCase();
+    const matchesSearch = !query || [business.name, vendorEmail, business.parish].some((value) => String(value || '').toLowerCase().includes(query));
+    const normalizedStatus = business.status?.toLowerCase() === 'active' ? 'approved' : String(business.status || 'pending').toLowerCase();
+    const matchesStatus = approvalFilter === 'all' || normalizedStatus === approvalFilter?.toLowerCase();
+    const matchesCategory = categoryFilter === 'all' || business.category?.toLowerCase() === categoryFilter?.toLowerCase();
+    return matchesSearch && matchesStatus && matchesCategory;
+  }), [businesses, search, approvalFilter, categoryFilter, vendorById]);
 
-    const filteredBusinesses = React.useMemo(() => {
-        return businesses?.filter((b) => {
-            const vendorEmail = b.vendorEmail || vendors?.find(v => v.vendor_id === b.owner_id)?.email || '';
-            const matchSearch = !search ||
-                b?.name?.toLowerCase()?.includes(search?.toLowerCase()) ||
-                vendorEmail?.toLowerCase()?.includes(search?.toLowerCase()) ||
-                b?.parish?.toLowerCase()?.includes(search?.toLowerCase());
+  const columns = [
+    {
+      key: 'vendor',
+      label: 'Vendor',
+      render: (business) => {
+        const vendor = vendorById.get(business.owner_id);
+        return <div><p className="text-sm font-semibold text-white">{vendor?.ownerName || vendor?.businessName || 'Unknown vendor'}</p><p className="text-xs mt-0.5 text-[#9FB5F5]">{business.vendorEmail || vendor?.email || 'No email'}</p></div>;
+      },
+    },
+    { key: 'category', label: 'Category', render: (business) => <span className="inline-flex px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-[#9FB5F5] bg-[#0D2F83] border border-[#1D4ED8]">{business.category || 'Uncategorized'}</span> },
+    { key: 'submitted', label: 'Submitted', render: (business) => business.created_at ? new Date(business.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A' },
+    { key: 'approval', label: 'Approval', render: (business) => <BusinessStatusBadge status={business.status} /> },
+  ];
 
-            let statusVal = b.status?.toLowerCase();
-            if (statusVal === 'active') statusVal = 'approved';
-
-            const matchApproval = approvalFilter === 'all' || statusVal === approvalFilter?.toLowerCase();
-
-            const matchCat = categoryFilter === 'all' || b?.category?.toLowerCase() === categoryFilter?.toLowerCase();
-
-            return matchSearch && matchApproval && matchCat;
-        });
-    }, [businesses, search, approvalFilter, categoryFilter, vendors]);
-
-    const toggleSelectAll = (e) => {
-        if (e.target.checked) {
-            setSelectedIds(filteredBusinesses?.map(b => b.id));
-        } else {
-            setSelectedIds([]);
-        }
-    };
-
-    const toggleSelect = (id) => {
-        setSelectedIds(prev =>
-            prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-        );
-    };
-
-    return (
-        <div className="w-full text-white font-sans">
-
-            {/* Filters Section */}
-            <div className="flex flex-col sm:flex-row gap-3">
-                <div className="flex-1">
-                    <Input
-                        type="search"
-                        placeholder="Search by name, email, or location..."
-                        value={search}
-                        onChange={(e) => onSearch(e?.target?.value)}
-                    />
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                    <div className="w-40">
-                        <Select options={approvalOptions} value={approvalFilter} onChange={onApprovalFilter} placeholder="Status" />
-                    </div>
-                    <div className="w-40">
-                        <Select options={categoryOptions} value={categoryFilter} onChange={onCategoryFilter} placeholder="Category" />
-                    </div>
-                    <Button variant="ghost" size="sm" iconName="X" iconPosition="left" onClick={onClearFilters}>Clear</Button>
-                </div>
-            </div>
-
-            <div className="mb-4">
-                <span className="text-sm text-[#9BA4E8]">Showing <strong className="text-white">{filteredBusinesses?.length || 0}</strong> business{filteredBusinesses?.length !== 1 ? 'es' : ''}</span>
-            </div>
-
-            {/* Table Section */}
-            <div className="bg-[#182365] border border-[#2A377D] rounded-xl overflow-hidden shadow-lg">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-
-                        {/* Table Header */}
-                        <thead>
-                            <tr className="bg-[#1C2A75] border-b border-[#2A377D]">
-                                <th className="px-6 py-4 w-12">
-                                    <div className="flex items-center justify-center">
-                                        <input
-                                            type="checkbox"
-                                            onChange={toggleSelectAll}
-                                            checked={filteredBusinesses?.length > 0 && filteredBusinesses.every(b => selectedIds.includes(b.id))}
-                                            className="w-4 h-4 rounded border-[#2A377D] bg-[#111A50] cursor-pointer accent-[#C9A84C]"
-                                        />
-                                    </div>
-                                </th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider">Business</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider">Vendor</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider">Category</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider">Submitted</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider">Approval</th>
-                                <th className="px-6 py-4 text-xs font-bold text-[#9BA4E8] uppercase tracking-wider text-right">Actions</th>
-                            </tr>
-                        </thead>
-
-                        {/* Table Body */}
-                        <tbody className="divide-y divide-[#2A377D]">
-                            {filteredBusinesses?.map((business) => {
-                                const isHighlighted = business.id === highlightedBusinessId;
-                                return (
-                                    <tr
-                                        key={business.id}
-                                        id={`business-row-${business.id}`}
-                                        className={`transition-colors group ${isHighlighted
-                                            ? 'bg-[#2A3B95] border-l-4 border-l-[#C9A84C] ring-1 ring-[#C9A84C]/50'
-                                            : 'hover:bg-[#1D2B78]'
-                                            }`}
-                                    >
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center justify-center">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={selectedIds.includes(business.id)}
-                                                    onChange={() => toggleSelect(business.id)}
-                                                    className="w-4 h-4 rounded border-[#2A377D] bg-[#111A50] cursor-pointer accent-[#C9A84C]"
-                                                />
-                                            </div>
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-[#111A50] border border-[#2A377D] flex items-center justify-center flex-shrink-0 text-[#6B76B8]">
-                                                    <ImageIcon size={14} />
-                                                </div>
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-semibold text-white flex items-center gap-2">
-                                                        {business.name}
-
-                                                    </span>
-                                                    <span className="text-xs text-[#9BA4E8] mt-0.5">{business.parish}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <span className="text-sm text-[#9BA4E8]">
-                                                {business.vendorEmail || vendors?.find(v => v.vendor_id === business.owner_id)?.email || '—'}
-                                            </span>
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <span className="text-sm text-[#9BA4E8]">{business.category || '—'}</span>
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <span className="text-sm text-[#9BA4E8]">
-                                                {business.submitted || (business.created_at
-                                                    ? new Date(business.created_at).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                                                    : '—')}
-                                            </span>
-                                        </td>
-
-                                        <td className="px-6 py-4">
-                                            <div
-                                                className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold border ${statusColors[business.status]}`}
-                                            >
-                                                {business.status ? (business.status.charAt(0).toUpperCase() + business.status.slice(1).toLowerCase()) : 'Pending'}
-                                            </div>
-                                        </td>
-
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex items-center justify-end gap-4">
-                                                <button onClick={() => handleViewDetail(business)} className="flex items-center gap-2 text-sm text-[#9BA4E8] hover:text-white transition-colors">
-                                                    <Eye size={16} />
-                                                    View
-                                                </button>
-
-                                                {business.status?.toLowerCase() === 'pending' && (
-                                                    <button onClick={() => handleBusinessApprove(business.id)} className="flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-[#10B981] hover:bg-[#059669] text-white text-sm font-bold transition-colors">
-                                                        <Check size={14} strokeWidth={3} />
-                                                        Approve
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-
-                    </table>
-                </div>
-            </div>
+  return (
+    <div className="w-full space-y-4">
+      <section className="rounded-2xl p-4 bg-[#0A2463] border border-[#1D4ED8]">
+        <div className="flex flex-col lg:flex-row gap-3">
+          <div className="flex-1"><Input type="search" placeholder="Search by business, vendor, email, or location..." value={search} onChange={(event) => onSearch(event.target.value)} /></div>
+          <div className="flex gap-2 flex-wrap">
+            <div className="w-44"><Select options={approvalOptions} value={approvalFilter} onChange={onApprovalFilter} placeholder="Status" /></div>
+            <div className="w-44"><Select options={categoryOptions} value={categoryFilter} onChange={onCategoryFilter} placeholder="Category" /></div>
+            <Button variant="ghost" size="sm" iconName="X" iconPosition="left" onClick={onClearFilters}>Clear</Button>
+          </div>
         </div>
-    );
-}
+      </section>
+
+      <AdminEntityTable
+        title="Businesses"
+        singularLabel="Business"
+        rows={filteredBusinesses}
+        columns={columns}
+        selectedIds={selectedIds}
+        onToggleSelect={(id) => setSelectedIds((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])}
+        onToggleSelectAll={(checked) => setSelectedIds(checked ? filteredBusinesses.map((business) => business.id) : [])}
+        getTitle={(business) => business.name || 'Unnamed business'}
+        getSubtitle={(business) => business.parish || 'No location'}
+        getImage={getBusinessImage}
+        highlightedId={highlightedBusinessId}
+        renderActions={(business) => (
+          <>
+            <button type="button" onClick={() => handleViewDetail(business)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#FBC33B] bg-[#3C351E] border border-[#FBC33B]/45 hover:brightness-110"><Icon name="Eye" size={14} />View</button>
+            {String(business.status).toLowerCase() === 'pending' && <button type="button" onClick={() => handleBusinessApprove(business.id)} className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500"><Icon name="Check" size={14} />Approve</button>}
+          </>
+        )}
+        emptyTitle="No businesses found"
+        emptyDescription="No businesses match the current filters."
+      />
+    </div>
+  );
+};
+
+export default AdminBusinessesList;

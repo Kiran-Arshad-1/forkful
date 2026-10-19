@@ -8,7 +8,10 @@ import NotFound from 'pages/NotFound';
 import VendorLogin from '../pages/vendor-login';
 import VendorSignup from '../pages/vendor-signup';
 import VendorDashboard from '../pages/vendor-dashboard';
+import VendorSupport from '../pages/vendor-support';
 import AdminDashboard from '../pages/admin-dashboard';
+import AdminBusinessDetails from '../pages/admin-business-details';
+import AdminVendorDetails from '../pages/admin-vendor-details';
 
 // Auth guards & gate pages
 import ProtectedRoute from '../components/auth/ProtectedRoute';
@@ -34,11 +37,14 @@ const Router = () => (
         {/* Vendor dashboard */}
         <Route element={<ProtectedRoute allowedRoles={['vendor']} requireApproved={false} />}>
           <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+          <Route path="/vendor-support" element={<VendorSupport />} />
         </Route>
 
         {/* Admin dashboard */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} requireApproved={false} />}>
           <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin-dashboard/vendors/:vendorId" element={<AdminVendorDetails />} />
+          <Route path="/admin-dashboard/businesses/:businessId" element={<AdminBusinessDetails />} />
         </Route>
 
         <Route path="*" element={<NotFound />} />

@@ -118,9 +118,9 @@ const Select = React.forwardRef(({
                     id={selectId}
                     type="button"
                     className={cn(
-                        "flex h-10 w-full items-center justify-between rounded-md border border-input bg-white text-black px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
-                        error && "border-destructive focus:ring-destructive",
-                        !hasValue && "text-muted-foreground"
+                        "flex h-11 w-full items-center justify-between rounded-xl border border-[#C9A84C]/70 bg-[#081C49] text-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FBC33B]/40 focus:border-[#FBC33B] disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                        error && "border-[#FF4D5E] focus:ring-[#FF4D5E]/40",
+                        !hasValue && "text-[#9FB5F5]"
                     )}
                     onClick={handleToggle}
                     disabled={disabled}
@@ -173,9 +173,9 @@ const Select = React.forwardRef(({
 
                 {/* Dropdown */}
                 {isOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-white text-black border border-border rounded-md shadow-md">
+                    <div className="absolute z-50 w-full mt-1 bg-[#081C49] text-white border border-[#C9A84C]/70 rounded-xl shadow-2xl overflow-hidden">
                         {searchable && (
-                            <div className="p-2 border-b">
+                            <div className="p-2 border-b border-[#254477]">
                                 <div className="relative">
                                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
@@ -190,7 +190,7 @@ const Select = React.forwardRef(({
 
                         <div className="py-1 max-h-60 overflow-auto">
                             {filteredOptions?.length === 0 ? (
-                                <div className="px-3 py-2 text-sm text-muted-foreground">
+                                <div className="px-3 py-2 text-sm text-[#9FB5F5]">
                                     {searchTerm ? 'No options found' : 'No options available'}
                                 </div>
                             ) : (
@@ -198,8 +198,8 @@ const Select = React.forwardRef(({
                                     <div
                                         key={option?.value}
                                         className={cn(
-                                            "relative flex cursor-pointer select-none items-center rounded-sm px-3 py-2 text-sm outline-none hover:bg-accent hover:text-accent-foreground",
-                                            isSelected(option?.value) && "bg-primary text-primary-foreground",
+                                            "relative flex cursor-pointer select-none items-center mx-1 my-0.5 rounded-lg px-3 py-2.5 text-sm outline-none text-[#DCE6FF] hover:bg-[#17439B] hover:text-white",
+                                            isSelected(option?.value) && "bg-[#FBC33B] text-[#061538] hover:bg-[#FBC33B] hover:text-[#061538] font-semibold",
                                             option?.disabled && "pointer-events-none opacity-50"
                                         )}
                                         onClick={() => !option?.disabled && handleOptionSelect(option)}

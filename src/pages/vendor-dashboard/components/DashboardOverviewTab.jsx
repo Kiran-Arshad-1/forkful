@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import Icon from 'components/AppIcon';
-import { getBusinessStatus, isBusinessActive } from '../utils/businessStatus';
+import BusinessStatusBadge from 'components/business/BusinessStatusBadge';
+import { isBusinessActive } from '../utils/businessStatus';
 
 const CATEGORY_ICONS = {
   bajan: 'CookingPot',
@@ -66,7 +67,6 @@ const BusinessMetric = ({ icon, value, label }) => (
 const BusinessCard = ({ business, onViewDetails, onManage }) => {
   const category = business?.category || business?.cuisine_type;
   const categoryIcon = getCategoryIcon(category);
-  const status = getBusinessStatus(business?.status);
   const photos = Array.isArray(business?.business_images_urls) ? business.business_images_urls.filter(Boolean) : [];
   const bannerImage = photos[0] || null;
   const parish = formatLabel(business?.parish, 'Barbados');
@@ -86,13 +86,7 @@ const BusinessCard = ({ business, onViewDetails, onManage }) => {
           </div>
         )}
         <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(6, 21, 56, 0.78), transparent 65%)' }} />
-        <div
-          className="absolute top-3 right-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold backdrop-blur-md"
-          style={{ background: status.background, border: `1px solid ${status.border}`, color: status.color }}
-        >
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: status.color }} />
-          {status.label}
-        </div>
+        <BusinessStatusBadge status={business?.status} className="absolute top-3 right-3 backdrop-blur-md !text-[10px] !px-2.5" />
       </div>
 
       <div className="relative flex-1 flex flex-col px-4 pb-4">
@@ -167,6 +161,7 @@ const DashboardOverviewTab = ({
   onAddBusiness,
   onViewBusiness,
   onManageBusiness,
+  onContactSupport,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -303,6 +298,39 @@ const DashboardOverviewTab = ({
           <QuickAction icon="BarChart3" title="View Insights" description="Track performance" color="#A78BFA" onClick={() => onNavigateToTab('insights')} />
         </aside>
       </div>
+
+      <section
+        className="relative overflow-hidden rounded-2xl px-5 py-5 sm:px-7 sm:py-6"
+        style={{ background: 'linear-gradient(110deg, #0A2463 0%, #081C49 100%)', border: '1px solid #1D4ED8' }}
+      >
+        <div className="absolute right-[-8%] top-[-90px] w-[58%] h-44 rounded-[50%] border border-[#FBC33B]/25 rotate-[-8deg] pointer-events-none" />
+        <div className="absolute right-[-3%] top-[-65px] w-[55%] h-40 rounded-[50%] border border-[#1D4ED8] rotate-[-5deg] pointer-events-none" />
+        <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-5">
+          <div className="flex items-center gap-4 min-w-0">
+            <div
+              className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
+              style={{ background: '#081C49', border: '1px solid #FBC33B' }}
+            >
+              <Icon name="Sprout" size={27} color="#FBC33B" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-base font-bold text-white">Need Help Getting Started?</h2>
+              <p className="text-xs sm:text-sm mt-1 leading-5" style={{ color: '#9FB5F5' }}>
+                Our support team is here to help you set up your business and answer your questions.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onContactSupport}
+            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold flex-shrink-0 transition-all hover:bg-[#3C351E] active:scale-95"
+            style={{ color: '#FBC33B', border: '1px solid #FBC33B', background: 'rgba(60,53,30,0.35)' }}
+          >
+            Contact Support
+            <Icon name="ArrowRight" size={14} color="#FBC33B" />
+          </button>
+        </div>
+      </section>
     </div>
   );
 };

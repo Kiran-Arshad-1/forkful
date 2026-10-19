@@ -1,323 +1,49 @@
 import React from 'react';
 import Icon from 'components/AppIcon';
+import {
+  VendorAccountSection,
+  VendorProfileHeader,
+  VendorProfileSection,
+} from 'components/vendor/VendorProfileView';
 import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
 
-const COLORS = {
-  card: '#0A2463',
-  inset: '#081C49',
-  border: '#1D4ED8',
-  mutedBorder: '#254477',
-  gold: '#FBC33B',
-  muted: '#9FB5F5',
-  success: '#10D6A0',
-};
-
-const formatLabel = (value = '') => value
-  .replace(/[_-]/g, ' ')
-  .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
-const formatDate = (value) => {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const getSubscriptionStatus = (expiresAt) => {
-  if (!expiresAt) return null;
-  const expiryDate = new Date(expiresAt);
-  if (Number.isNaN(expiryDate.getTime())) return null;
-  return expiryDate >= new Date() ? 'Active' : 'Expired';
-};
-
-const getGenderBadgeStyle = (gender = '') => {
-  const normalized = gender.toLowerCase().replace(/[\s-]+/g, '_');
-  const styles = {
-    female: {
-      background: 'rgba(249,168,212,0.16)',
-      border: '1px solid #F9A8D4',
-      color: '#FBCFE8',
-    },
-    male: {
-      background: 'rgba(96,165,250,0.16)',
-      border: '1px solid #60A5FA',
-      color: '#BFDBFE',
-    },
-    prefer_not_to_say: {
-      background: 'rgba(167,139,250,0.16)',
-      border: '1px solid #A78BFA',
-      color: '#DDD6FE',
-    },
-    other: {
-      background: 'rgba(251,195,59,0.14)',
-      border: `1px solid ${COLORS.gold}`,
-      color: '#FDE68A',
-    },
-  };
-
-  return styles[normalized] || {
-    background: COLORS.inset,
-    border: `1px solid ${COLORS.mutedBorder}`,
-    color: COLORS.muted,
-  };
-};
-
-const SettingsSection = ({ icon, title, description, action, children }) => (
-  <section
-    className="rounded-2xl overflow-hidden"
-    style={{ background: COLORS.card, border: `1px solid ${COLORS.border}` }}
-  >
-    <div
-      className="flex items-start justify-between gap-4 px-4 sm:px-5 py-4"
-      style={{ borderBottom: `1px solid ${COLORS.mutedBorder}` }}
-    >
-      <div className="flex items-start gap-3 min-w-0">
-        <div
-          className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
-          style={{ background: '#3C351E', border: `1px solid ${COLORS.gold}` }}
-        >
-          <Icon name={icon} size={19} color={COLORS.gold} />
-        </div>
-        <div className="min-w-0">
-          <h2 className="text-sm sm:text-base font-bold text-white">{title}</h2>
-          <p className="text-xs mt-0.5" style={{ color: COLORS.muted }}>{description}</p>
-        </div>
-      </div>
-      {action}
-    </div>
-    <div className="p-4 sm:p-5">{children}</div>
-  </section>
-);
-
-const DetailItem = ({ icon, label, value, href }) => {
-  const hasValue = value !== null && value !== undefined && value !== '';
-  const content = (
-    <>
-      <div
-        className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-        style={{ background: '#0D2F83', border: `1px solid ${COLORS.border}` }}
-      >
-        <Icon name={icon} size={16} color={COLORS.gold} />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: COLORS.muted }}>{label}</p>
-        <p className={`text-sm mt-0.5 break-words ${hasValue ? 'text-white' : 'italic'}`} style={!hasValue ? { color: COLORS.muted } : undefined}>
-          {hasValue ? value : 'N/A'}
-        </p>
-      </div>
-    </>
-  );
-  const className = 'flex items-center gap-3 rounded-xl p-3 min-w-0';
-  const style = { background: COLORS.inset, border: `1px solid ${COLORS.mutedBorder}` };
-
-  return href && hasValue ? (
-    <a href={href} className={`${className} hover:brightness-110 transition-all`} style={style}>{content}</a>
-  ) : (
-    <div className={className} style={style}>{content}</div>
-  );
-};
-
-const TipItem = ({ number, icon, title, description }) => (
-  <div
-    className="relative flex items-start gap-3.5 rounded-xl p-4 overflow-hidden"
-    style={{ background: COLORS.inset, border: `1px solid ${COLORS.mutedBorder}` }}
-  >
-    <span
-      className="absolute right-3 top-2 text-3xl font-black select-none"
-      style={{ color: 'rgba(159,181,245,0.08)' }}
-      aria-hidden="true"
-    >
-      {String(number).padStart(2, '0')}
-    </span>
-    <div
-      className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 relative"
-      style={{ background: '#3C351E', border: `1px solid ${COLORS.gold}` }}
-    >
-      <Icon name={icon} size={18} color={COLORS.gold} />
-    </div>
-    <div className="flex-1 min-w-0 relative pr-5">
-      <p className="text-sm font-bold text-white">{title}</p>
-      <p className="text-xs mt-1 leading-5" style={{ color: COLORS.muted }}>{description}</p>
-    </div>
-  </div>
-);
-
-const ProfileHero = ({ profile, user, onEditAccount }) => {
-  const fullName = profile?.full_name || user?.email || 'Vendor';
-  const email = profile?.email || user?.email;
-  const profileImage = profile?.profile_image_url || profile?.banner_image_url;
-  const initials = fullName
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-  const subscriptionStatus = getSubscriptionStatus(profile?.subscription_expires_at) || 'N/A';
-  const isActive = subscriptionStatus === 'Active';
-
-  const highlights = [
-    { icon: 'Mail', value: email },
-    { icon: 'Phone', value: profile?.contact_phone },
-    { icon: 'MapPin', value: profile?.address },
-  ].filter((item) => item.value);
-
-  return (
-    <section
-      className="rounded-3xl p-5 sm:p-6 lg:p-7 relative overflow-hidden shadow-2xl"
-      style={{
-        background: 'linear-gradient(135deg, #0A2463 0%, #061538 100%)',
-        border: `1px solid ${COLORS.border}`,
-      }}
-    >
-      <div className="absolute -right-20 -top-20 w-72 h-72 rounded-full pointer-events-none blur-3xl" style={{ background: 'rgba(251,195,59,0.1)' }} />
-      <div className="absolute -left-20 -bottom-24 w-64 h-64 rounded-full pointer-events-none blur-3xl" style={{ background: 'rgba(29,78,216,0.16)' }} />
-
-      <div className="relative flex flex-col xl:flex-row items-stretch justify-between gap-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 flex-1 min-w-0">
-          <div
-            className="w-28 h-28 sm:w-36 sm:h-36 rounded-2xl overflow-hidden flex-shrink-0 shadow-xl flex items-center justify-center"
-            style={{ background: COLORS.inset, border: `2px solid ${COLORS.gold}` }}
-          >
-            {profileImage ? (
-              <img src={profileImage} alt={fullName} className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-3xl sm:text-4xl font-extrabold" style={{ color: COLORS.gold }}>{initials || 'V'}</span>
-            )}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              {profile?.approval_status && (
-                <span
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold"
-                  style={{ background: 'rgba(16,214,160,0.12)', border: '1px solid rgba(16,214,160,0.45)', color: COLORS.success }}
-                >
-                  <Icon name="BadgeCheck" size={12} color={COLORS.success} />
-                  {formatLabel(profile.approval_status)} Account
-                </span>
-              )}
-              {profile?.gender && (
-                <span
-                  className="px-3 py-1 rounded-full text-[11px] font-semibold"
-                  style={getGenderBadgeStyle(profile.gender)}
-                >
-                  {formatLabel(profile.gender)}
-                </span>
-              )}
-            </div>
-
-            <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight mt-3">
-              {fullName}
-            </h1>
-            <p className="text-xs sm:text-sm mt-1" style={{ color: COLORS.muted }}>ForkFul vendor account</p>
-
-            <div className="flex items-center gap-x-5 gap-y-2 flex-wrap mt-4">
-              {highlights.map((item) => (
-                <span key={item.icon} className="inline-flex items-center gap-1.5 text-xs min-w-0" style={{ color: '#DCE6FF' }}>
-                  <Icon name={item.icon} size={13} color={COLORS.gold} />
-                  <span className="truncate max-w-[260px]">{item.value}</span>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="xl:w-72 flex flex-col gap-3 justify-between">
-          <button
-            type="button"
-            onClick={onEditAccount}
-            className="self-start xl:self-end inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all hover:brightness-110"
-            style={{ background: COLORS.gold, color: '#061538' }}
-          >
-            <Icon name="Pencil" size={14} color="#061538" />
-            Edit Profile
-          </button>
-
-          <div className="rounded-2xl p-4" style={{ background: 'rgba(8,28,73,0.82)', border: `1px solid ${COLORS.mutedBorder}` }}>
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: '#3C351E', border: `1px solid ${COLORS.gold}` }}>
-                <Icon name="Crown" size={19} color={COLORS.gold} />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-wider font-bold" style={{ color: COLORS.muted }}>Subscription</p>
-                <p className="text-base font-bold" style={{ color: isActive ? COLORS.success : subscriptionStatus === 'Expired' ? '#FCA5A5' : COLORS.muted }}>
-                  {subscriptionStatus}
-                </p>
-              </div>
-            </div>
-            <div className="mt-3 pt-3 flex items-center justify-between gap-3" style={{ borderTop: `1px solid ${COLORS.mutedBorder}` }}>
-              <span className="text-xs" style={{ color: COLORS.muted }}>Expires</span>
-              <span className="text-xs font-semibold text-white">{formatDate(profile?.subscription_expires_at) || 'N/A'}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-};
+const TIPS = [
+  { icon: 'Store', title: 'Keep details complete', description: 'Accurate contact information and business details help customers reach you.' },
+  { icon: 'Camera', title: 'Use fresh, clear photos', description: 'Show your food, space, and team with well-lit images that represent your business.' },
+  { icon: 'Clock3', title: 'Maintain accurate hours', description: 'Update opening hours whenever your regular schedule or holiday availability changes.' },
+  { icon: 'MessageSquareReply', title: 'Respond to reviews', description: 'Thoughtful owner replies show customers that you value their feedback and experience.' },
+];
 
 const SettingsTab = ({ onEditAccount }) => {
   const { user } = useAuthStore();
   const { profile } = useVendorProfileStore();
 
-  const accountEmail = profile?.email || user?.email;
-
   return (
     <div className="w-full space-y-6">
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: COLORS.gold }}>Account Settings</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#FBC33B]">Account Settings</p>
         <h1 className="font-heading text-2xl sm:text-3xl font-bold text-white mt-1">Profile & Account</h1>
-        <p className="text-sm mt-1" style={{ color: COLORS.muted }}>Manage your vendor identity and account information.</p>
+        <p className="text-sm mt-1 text-[#9FB5F5]">Manage your vendor identity and account information.</p>
       </div>
 
-      <ProfileHero profile={profile} user={user} onEditAccount={onEditAccount} />
+      <VendorProfileHeader profile={profile} user={user} onEditAccount={onEditAccount} />
 
       <div className="grid grid-cols-1 xl:grid-cols-[2fr_1fr] gap-6 items-start">
-        <SettingsSection
-          icon="UserRound"
-          title="Vendor Account"
-          description="Account information from your vendor profile."
-        >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <DetailItem icon="User" label="Account Name" value={profile?.full_name} />
-            <DetailItem icon="Mail" label="Account Email" value={accountEmail} href={accountEmail ? `mailto:${accountEmail}` : null} />
-            <DetailItem icon="Phone" label="Contact Number" value={profile?.contact_phone} href={profile?.contact_phone ? `tel:${profile.contact_phone}` : null} />
-            <DetailItem icon="UserRound" label="Gender" value={profile?.gender ? formatLabel(profile.gender) : null} />
-            <DetailItem icon="MapPin" label="Account Address" value={profile?.address} />
-            <DetailItem icon="BadgeCheck" label="Account Status" value={profile?.approval_status ? formatLabel(profile.approval_status) : null} />
-            <DetailItem
-              icon="Crown"
-              label="Subscription"
-              value={getSubscriptionStatus(profile?.subscription_expires_at)}
-            />
-            <DetailItem icon="CalendarDays" label="Subscription Through" value={formatDate(profile?.subscription_expires_at)} />
-            <DetailItem icon="CalendarPlus" label="Account Created" value={formatDate(profile?.created_at)} />
-            <DetailItem icon="CalendarClock" label="Profile Updated" value={formatDate(profile?.updated_at)} />
-          </div>
-        </SettingsSection>
+        <VendorAccountSection profile={profile} user={user} />
 
-        <SettingsSection
-          icon="Lightbulb"
-          title="Tips for a Stronger Listing"
-          description="Simple ways to keep your ForkFul presence useful and attractive."
-        >
+        <VendorProfileSection icon="Lightbulb" title="Tips for a Stronger Listing" description="Simple ways to keep your ForkFul presence useful and attractive.">
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-1 gap-3">
-            <TipItem number={1} icon="Store" title="Keep details complete" description="Accurate contact information and business details help customers reach you." />
-            <TipItem number={2} icon="Camera" title="Use fresh, clear photos" description="Show your food, space, and team with well-lit images that represent your business." />
-            <TipItem number={3} icon="Clock3" title="Maintain accurate hours" description="Update opening hours whenever your regular schedule or holiday availability changes." />
-            <TipItem number={4} icon="MessageSquareReply" title="Respond to reviews" description="Thoughtful owner replies show customers that you value their feedback and experience." />
+            {TIPS.map((tip, index) => (
+              <div key={tip.title} className="relative flex items-start gap-3.5 rounded-xl p-4 overflow-hidden bg-[#081C49] border border-[#254477]">
+                <span className="absolute right-3 top-2 text-3xl font-black text-[#9FB5F5]/10 select-none" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <span className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-[#3C351E] border border-[#FBC33B]"><Icon name={tip.icon} size={18} color="#FBC33B" /></span>
+                <div className="flex-1 min-w-0 relative pr-5"><p className="text-sm font-bold text-white">{tip.title}</p><p className="text-xs mt-1 leading-5 text-[#9FB5F5]">{tip.description}</p></div>
+              </div>
+            ))}
           </div>
-          <p className="flex items-start gap-2 text-[11px] leading-5 mt-4 rounded-xl p-3" style={{ color: '#DCE6FF', background: 'rgba(251,195,59,0.08)', border: '1px solid rgba(251,195,59,0.25)' }}>
-            <Icon name="Sparkles" size={14} color={COLORS.gold} className="flex-shrink-0 mt-0.5" />
-            Complete, current listings make it easier for customers to choose your business with confidence.
-          </p>
-        </SettingsSection>
+          <p className="flex items-start gap-2 text-[11px] leading-5 mt-4 rounded-xl p-3 text-[#DCE6FF] bg-[#FBC33B]/10 border border-[#FBC33B]/25"><Icon name="Sparkles" size={14} color="#FBC33B" className="flex-shrink-0 mt-0.5" />Complete, current listings make it easier for customers to choose your business with confidence.</p>
+        </VendorProfileSection>
       </div>
     </div>
   );

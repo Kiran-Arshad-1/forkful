@@ -1,5 +1,6 @@
 import React from 'react';
 import Icon from 'components/AppIcon';
+import BusinessStatusBadge from 'components/business/BusinessStatusBadge';
 import { getBusinessStatus } from '../../utils/businessStatus';
 
 const TabHeroHeader = ({
@@ -97,20 +98,7 @@ const TabHeroHeader = ({
             {/* Business Details */}
             <div className="flex-1 min-w-0 space-y-2.5">
               {/* Approval status badge */}
-              <div
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold"
-                style={{
-                  background: status.background,
-                  border: `1px solid ${status.border}`,
-                  color: status.color,
-                }}
-              >
-                <div
-                  className="w-1.5 h-1.5 rounded-full"
-                  style={{ background: status.color }}
-                />
-                <span>{status.label}</span>
-              </div>
+              <BusinessStatusBadge status={business?.status} />
 
               {/* Title & Verified Checkmark */}
               <div className="flex items-center gap-2 flex-wrap">

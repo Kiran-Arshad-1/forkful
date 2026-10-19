@@ -193,6 +193,7 @@ const VendorDashboard = () => {
           onAddBusiness={handleAddBusiness}
           onViewBusiness={handleViewBusiness}
           onManageBusiness={handleManageBusiness}
+          onContactSupport={() => navigate('/vendor-support')}
         />
       </div>
       <div style={{ display: activeTab === 'business-profile' ? 'block' : 'none' }}>
@@ -237,7 +238,11 @@ const VendorDashboard = () => {
         <BillingTab />
       </div>
       <div style={{ display: activeTab === 'insights' ? 'block' : 'none' }}>
-        <InsightsTab />
+        <InsightsTab
+          businessId={selectedBusinessId}
+          business={selectedBusiness}
+          isActive={activeTab === 'insights'}
+        />
       </div>
       <div style={{ display: activeTab === 'reviews' ? 'block' : 'none' }}>
         <ReviewsTab
@@ -330,7 +335,6 @@ const VendorDashboard = () => {
           </div>
         </footer>
       </div>
-
       {/* ── Edit Profile Modal ─────────────────────────────────────────────────── */}
       {showEditModal && (
         <div
@@ -395,6 +399,8 @@ const VendorDashboard = () => {
                   className="text-xs font-semibold transition-all hover:underline"
                   style={{ color: '#FBC33B' }}
                 >
+
+
                   {photoPreview ? 'Change Photo' : 'Upload Photo'}
                 </button>
                 <input

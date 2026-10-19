@@ -22,7 +22,7 @@ const subscriptionOptions = [
 
 
 const VendorFilters = ({ search, onSearch, approvalFilter, onApprovalFilter, subscriptionFilter, onSubscriptionFilter, categoryFilter, onCategoryFilter, onClearFilters, selectedCount, onBulkApprove }) => (
-  <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
+  <div className="bg-[#0A2463] border border-[#1D4ED8] rounded-2xl p-4 flex flex-col gap-3">
     <div className="flex flex-col sm:flex-row gap-3">
       <div className="flex-1">
         <Input
@@ -44,8 +44,8 @@ const VendorFilters = ({ search, onSearch, approvalFilter, onApprovalFilter, sub
       </div>
     </div>
     {selectedCount > 0 && (
-      <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-        <span className="text-sm font-medium text-amber-800 font-body">{selectedCount} vendor{selectedCount > 1 ? 's' : ''} selected</span>
+      <div className="flex items-center gap-3 p-3 bg-[#3C351E] border border-[#FBC33B]/50 rounded-xl">
+        <span className="text-sm font-medium text-[#FBC33B] font-body">{selectedCount} vendor{selectedCount > 1 ? 's' : ''} selected</span>
         <Button variant="success" size="xs" iconName="CheckCircle" iconPosition="left" onClick={onBulkApprove}>
           Bulk Approve
         </Button>
