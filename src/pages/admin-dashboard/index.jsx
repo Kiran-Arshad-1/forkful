@@ -53,7 +53,7 @@ const mapProfile = (p) => ({
 const SECTIONS = [
   { id: 'overview', label: 'Overview', shortLabel: 'Overview', icon: 'LayoutDashboard' },
   { id: 'vendors', label: 'All Vendors', shortLabel: 'Vendors', icon: 'Store' },
-  { id: 'subscriptions', label: 'Subscriptions', shortLabel: 'Billing', icon: 'CreditCard' },
+  // { id: 'subscriptions', label: 'Subscriptions', shortLabel: 'Billing', icon: 'CreditCard' },
   { id: 'businesses', label: 'Businesses', shortLabel: 'Businesses', icon: 'Store' },
   { id: 'trails', label: 'Food Trails', shortLabel: 'Trails', icon: 'Map' },
 ];
@@ -67,7 +67,7 @@ const AdminDashboard = () => {
   const setActiveSection = (section) => {
     navigate(section === 'overview' ? '/admin-dashboard' : `/admin-dashboard?section=${section}`);
   };
-  const [sidebarCollapsed] = useState(true);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
 
   const [vendors, setVendors] = useState([]);
   const [vendorsLoading, setVendorsLoading] = useState(true);
@@ -247,14 +247,14 @@ const AdminDashboard = () => {
   const pendingCount = vendors?.filter((v) => v?.approvalStatus === 'pending')?.length;
 
   const contentStyle = {
-    marginLeft: '72px'
+    marginLeft: desktopSidebarOpen ? '256px' : '0'
   };
 
   return (
     <div className="min-h-screen" style={{ background: '#0F1A5C' }}>
       <AdminNavigation
-        isCollapsed={sidebarCollapsed}
-        onToggleCollapse={() => { }}
+        desktopOpen={desktopSidebarOpen}
+        onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)}
         activeSection={activeSection} />
 
       {/* Main Content */}
@@ -264,7 +264,12 @@ const AdminDashboard = () => {
 
           {/* Top Bar */}
           <div className="sticky top-0 z-navigation px-6 py-4 flex items-center justify-between"
-            style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(251, 195, 59,0.3)', boxShadow: '0 2px 8px rgba(251, 195, 59,0.1)' }}>
+            style={{
+              background: '#0F1A5C',
+              borderBottom: '1px solid rgba(251, 195, 59,0.3)',
+              boxShadow: '0 2px 8px rgba(251, 195, 59,0.1)',
+              paddingLeft: desktopSidebarOpen ? '24px' : '80px',
+            }}>
             <div>
               <h1 className="font-heading font-bold text-2xl" style={{ color: '#FFFFFF' }}>
                 {activeSection === 'overview' && 'Dashboard Overview'}
@@ -363,7 +368,7 @@ const AdminDashboard = () => {
               </>
             }
 
-            {activeSection === 'subscriptions' && <SubscriptionPanel />}
+            {activeSection === 'subscriptions' && <SubscriptionPanel vendors={baseVendors} loading={vendorsLoading || businessesLoading} />}
             {activeSection === 'trails' && (
               <TrailsPanel
                 trails={trails}
@@ -482,7 +487,7 @@ const AdminDashboard = () => {
               </>
             }
 
-            {activeSection === 'subscriptions' && <SubscriptionPanel />}
+            {activeSection === 'subscriptions' && <SubscriptionPanel vendors={baseVendors} loading={vendorsLoading || businessesLoading} />}
             {activeSection === 'trails' && (
               <TrailsPanel
                 trails={trails}

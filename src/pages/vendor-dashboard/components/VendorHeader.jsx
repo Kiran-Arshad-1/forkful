@@ -2,6 +2,47 @@ import React, { useState, useRef, useEffect } from 'react';
 import Icon from 'components/AppIcon';
 import { getBusinessStatus } from '../utils/businessStatus';
 
+export const SidebarToggleButtons = ({
+  onToggleMobileSidebar,
+  isMobileSidebarOpen = false,
+  onToggleDesktopSidebar,
+  isDesktopSidebarOpen = true,
+}) => (
+  <>
+    <button
+      type="button"
+      onClick={onToggleMobileSidebar}
+      className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
+      style={{
+        color: isMobileSidebarOpen ? '#FBC33B' : '#9FB5F5',
+        background: isMobileSidebarOpen ? '#3C351E' : 'transparent',
+        border: isMobileSidebarOpen ? '1px solid #FBC33B' : '1px solid transparent',
+      }}
+      aria-label={isMobileSidebarOpen ? 'Close navigation menu' : 'Open navigation menu'}
+      aria-expanded={isMobileSidebarOpen}
+      aria-controls="vendor-mobile-sidebar"
+    >
+      <Icon name={isMobileSidebarOpen ? 'X' : 'Menu'} size={24} />
+    </button>
+
+    <button
+      type="button"
+      onClick={onToggleDesktopSidebar}
+      className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl transition-colors hover:bg-[#17439B]"
+      style={{
+        color: isDesktopSidebarOpen ? '#FBC33B' : '#9FB5F5',
+        background: isDesktopSidebarOpen ? '#3C351E' : 'transparent',
+        border: isDesktopSidebarOpen ? '1px solid #FBC33B' : '1px solid #254477',
+      }}
+      aria-label={isDesktopSidebarOpen ? 'Collapse navigation sidebar' : 'Open navigation sidebar'}
+      aria-expanded={isDesktopSidebarOpen}
+      aria-controls="vendor-desktop-sidebar"
+    >
+      <Icon name="Menu" size={24} />
+    </button>
+  </>
+);
+
 const VendorHeader = ({
   vendorName = 'Vendor',
   vendorEmail = '',
@@ -57,37 +98,12 @@ const VendorHeader = ({
     >
       {/* Left Section: Mobile Toggle & Restaurant Selector */}
       <div className="flex items-center gap-3">
-        {/* Mobile Sidebar Hamburger */}
-        <button
-          onClick={onToggleMobileSidebar}
-          className="lg:hidden w-10 h-10 flex items-center justify-center rounded-xl transition-colors"
-          style={{
-            color: isMobileSidebarOpen ? '#FBC33B' : '#9FB5F5',
-            background: isMobileSidebarOpen ? '#3C351E' : 'transparent',
-            border: isMobileSidebarOpen ? '1px solid #FBC33B' : '1px solid transparent',
-          }}
-          aria-label={isMobileSidebarOpen ? 'Close navigation menu' : 'Open navigation menu'}
-          aria-expanded={isMobileSidebarOpen}
-          aria-controls="vendor-mobile-sidebar"
-        >
-          <Icon name={isMobileSidebarOpen ? 'X' : 'Menu'} size={24} />
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggleDesktopSidebar}
-          className="hidden lg:flex w-10 h-10 items-center justify-center rounded-xl transition-colors hover:bg-[#17439B]"
-          style={{
-            color: isDesktopSidebarOpen ? '#FBC33B' : '#9FB5F5',
-            background: isDesktopSidebarOpen ? '#3C351E' : 'transparent',
-            border: isDesktopSidebarOpen ? '1px solid #FBC33B' : '1px solid #254477',
-          }}
-          aria-label={isDesktopSidebarOpen ? 'Collapse navigation sidebar' : 'Open navigation sidebar'}
-          aria-expanded={isDesktopSidebarOpen}
-          aria-controls="vendor-desktop-sidebar"
-        >
-          <Icon name="Menu" size={24} />
-        </button>
+        <SidebarToggleButtons
+          onToggleMobileSidebar={onToggleMobileSidebar}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          onToggleDesktopSidebar={onToggleDesktopSidebar}
+          isDesktopSidebarOpen={isDesktopSidebarOpen}
+        />
 
         {/* Restaurant Selector Dropdown */}
         <div className="relative" ref={restaurantMenuRef}>

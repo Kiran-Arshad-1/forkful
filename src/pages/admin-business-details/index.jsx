@@ -27,6 +27,7 @@ const getPhotoUrl = (photo) => {
 const AdminBusinessDetails = () => {
   const { businessId } = useParams();
   const navigate = useNavigate();
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [business, setBusiness] = useState(null);
   const [openingHours, setOpeningHours] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
@@ -187,8 +188,8 @@ const AdminBusinessDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F1A5C]">
-        <AdminNavigation isCollapsed activeSection="businesses" />
-        <main className="min-h-screen lg:ml-[72px] flex items-center justify-center px-6">
+        <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="businesses" />
+        <main className={`min-h-screen flex items-center justify-center px-6 transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
           <div className="text-center">
             <div className="w-10 h-10 mx-auto rounded-full border-4 border-[#FBC33B]/30 border-t-[#FBC33B] animate-spin" />
             <p className="mt-4 text-sm text-[#9BA4E8]">Loading business details...</p>
@@ -201,8 +202,8 @@ const AdminBusinessDetails = () => {
   if (error || !business) {
     return (
       <div className="min-h-screen bg-[#0F1A5C]">
-        <AdminNavigation isCollapsed activeSection="businesses" />
-        <main className="min-h-screen lg:ml-[72px] flex items-center justify-center p-6">
+        <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="businesses" />
+        <main className={`min-h-screen flex items-center justify-center p-6 transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
           <div className="max-w-md w-full text-center rounded-2xl border border-[#2A377D] bg-[#14236A] p-8">
             <span className="mx-auto w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center"><Icon name="CircleAlert" size={25} color="#F87171" /></span>
             <h1 className="mt-4 text-xl font-bold text-white">Business unavailable</h1>
@@ -216,9 +217,9 @@ const AdminBusinessDetails = () => {
 
   return (
     <div className="min-h-screen bg-[#0F1A5C]">
-      <AdminNavigation isCollapsed activeSection="businesses" />
+      <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="businesses" />
 
-      <main className="min-h-screen lg:ml-[72px]">
+      <main className={`min-h-screen transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
         <div className="max-w-[1500px] mx-auto px-5 sm:px-7 py-6 sm:py-8">
           <BusinessProfileHeader
             business={business}

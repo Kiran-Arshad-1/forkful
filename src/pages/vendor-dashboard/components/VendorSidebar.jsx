@@ -1,9 +1,9 @@
 import React from 'react';
 import Icon from 'components/AppIcon';
 
-const NAV_ITEMS = [
+const DEFAULT_NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: 'LayoutDashboard' },
-  { id: 'businesses', label: 'Businesses', icon: 'Store', hasBadge: true },
+  { id: 'businesses', label: 'Businesses', icon: 'Store', hasBadge: true, targetId: 'business-profile', activeIds: ['businesses', 'business-profile'] },
   { id: 'menu', label: 'Menu', icon: 'Utensils' },
   { id: 'photos', label: 'Photos', icon: 'Camera' },
   { id: 'reviews', label: 'Reviews', icon: 'Star' },
@@ -19,6 +19,8 @@ const VendorSidebar = ({
   desktopOpen = true,
   isOpen = false,
   onClose,
+  navItems = DEFAULT_NAV_ITEMS,
+  brandSubtitle = 'For Better Food Experiences',
 }) => {
   const handleNavClick = (tabId) => {
     onTabChange(tabId);
@@ -47,7 +49,7 @@ const VendorSidebar = ({
               Fork<span style={{ color: '#FBC33B' }}>Ful</span>
             </span>
             <span className="text-[10px] tracking-wide font-medium" style={{ color: '#9FB5F5' }}>
-              For Better Food Experiences
+              {brandSubtitle}
             </span>
           </div>
         </div>
@@ -56,15 +58,15 @@ const VendorSidebar = ({
 
       {/* Navigation List */}
       <nav className="flex-1 px-4 py-5 space-y-1.5 overflow-y-auto scrollbar-none">
-        {NAV_ITEMS.map((item) => {
-          const isActive =
-            activeTab === item.id ||
-            (item.id === 'businesses' && activeTab === 'business-profile');
+        {navItems.map((item) => {
+          const activeIds = item.activeIds || [item.id];
+          const targetId = item.targetId || item.id;
+          const isActive = activeIds.includes(activeTab);
 
           return (
             <button
               key={item.id}
-              onClick={() => handleNavClick(item.id === 'businesses' ? 'business-profile' : item.id)}
+              onClick={() => handleNavClick(targetId)}
               className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 group ${
                 isActive
                   ? 'shadow-md'

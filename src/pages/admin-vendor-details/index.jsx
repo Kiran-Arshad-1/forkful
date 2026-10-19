@@ -17,6 +17,7 @@ const getBusinessImage = (business) => {
 const AdminVendorDetails = () => {
   const { vendorId } = useParams();
   const navigate = useNavigate();
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
   const [profile, setProfile] = useState(null);
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,8 +88,8 @@ const AdminVendorDetails = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F1A5C]">
-        <AdminNavigation isCollapsed activeSection="vendors" />
-        <main className="min-h-screen lg:ml-[72px] flex items-center justify-center">
+        <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="vendors" />
+        <main className={`min-h-screen flex items-center justify-center transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
           <div className="text-center"><div className="w-10 h-10 mx-auto rounded-full border-4 border-[#FBC33B]/30 border-t-[#FBC33B] animate-spin" /><p className="mt-4 text-sm text-[#9FB5F5]">Loading vendor profile...</p></div>
         </main>
       </div>
@@ -98,8 +99,8 @@ const AdminVendorDetails = () => {
   if (!profile) {
     return (
       <div className="min-h-screen bg-[#0F1A5C]">
-        <AdminNavigation isCollapsed activeSection="vendors" />
-        <main className="min-h-screen lg:ml-[72px] flex items-center justify-center p-6">
+        <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="vendors" />
+        <main className={`min-h-screen flex items-center justify-center p-6 transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
           <div className="max-w-md w-full text-center rounded-2xl border border-[#1D4ED8] bg-[#0A2463] p-8">
             <span className="mx-auto w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center"><Icon name="CircleAlert" size={25} color="#F87171" /></span>
             <h1 className="mt-4 text-xl font-bold text-white">Vendor unavailable</h1>
@@ -113,8 +114,8 @@ const AdminVendorDetails = () => {
 
   return (
     <div className="min-h-screen bg-[#0F1A5C]">
-      <AdminNavigation isCollapsed activeSection="vendors" />
-      <main className="min-h-screen lg:ml-[72px]">
+      <AdminNavigation desktopOpen={desktopSidebarOpen} onToggleDesktopSidebar={() => setDesktopSidebarOpen((open) => !open)} activeSection="vendors" />
+      <main className={`min-h-screen transition-[margin] duration-300 ${desktopSidebarOpen ? 'lg:ml-64' : 'lg:ml-0'}`}>
         <div className="max-w-[1500px] mx-auto px-5 sm:px-7 py-6 sm:py-8 space-y-6">
           <div className="flex items-center justify-between gap-4">
             <button type="button" onClick={() => navigate('/admin-dashboard?section=vendors')} className="inline-flex items-center gap-2 text-sm font-semibold text-[#9FB5F5] hover:text-white transition-colors"><Icon name="ArrowLeft" size={17} />Back to vendors</button>
