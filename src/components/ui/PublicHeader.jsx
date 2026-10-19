@@ -77,7 +77,7 @@ const PublicHeader = () => {
             <button
               onClick={() => navigate('/vendor-signup')}
               className="px-4 py-2 text-sm font-bold rounded-lg transition-all duration-250 flex items-center gap-2"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
+              style={{ background: '#FBC33B', color: '#0F1A5C' }}
             >
               Get Started
               <Icon name="ArrowRight" size={14} color="#0F1A5C" />
@@ -107,7 +107,7 @@ const PublicHeader = () => {
           <div
             id="mobile-menu"
             className="fixed top-16 left-0 right-0 z-navigation md:hidden"
-            style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(201,168,76,0.3)' }}
+            style={{ background: '#0F1A5C', borderBottom: '1px solid rgba(251, 195, 59,0.3)' }}
             role="dialog"
             aria-label="Mobile navigation menu"
           >
@@ -125,18 +125,18 @@ const PublicHeader = () => {
                   {item?.label}
                 </Link>
               ))}
-              <div className="mt-2 pt-3 flex flex-col gap-2" style={{ borderTop: '1px solid rgba(201,168,76,0.3)' }}>
+              <div className="mt-2 pt-3 flex flex-col gap-2" style={{ borderTop: '1px solid rgba(251, 195, 59,0.3)' }}>
                 <button
                   onClick={() => navigate('/vendor-login')}
                   className="w-full py-2.5 text-sm font-medium text-white border rounded-lg transition-all duration-250"
-                  style={{ borderColor: 'rgba(201,168,76,0.5)' }}
+                  style={{ borderColor: 'rgba(251, 195, 59,0.5)' }}
                 >
                   Sign In
                 </button>
                 <button
                   onClick={() => navigate('/vendor-signup')}
                   className="w-full py-2.5 text-sm font-bold rounded-lg transition-all duration-250"
-                  style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                  style={{ background: '#FBC33B', color: '#0F1A5C' }}
                 >
                   Get Started Free
                 </button>

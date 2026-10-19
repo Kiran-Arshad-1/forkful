@@ -88,13 +88,13 @@ module.exports = {
       },
 
       fontFamily: {
-        heading: ['Crimson Pro', 'Georgia', 'serif'],
-        body: ['Source Sans 3', 'system-ui', 'sans-serif'],
-        caption: ['Nunito Sans', 'system-ui', 'sans-serif'],
-        data: ['JetBrains Mono', 'monospace'],
-        sans: ['Source Sans 3', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
-        serif: ['Crimson Pro', 'Georgia', 'serif'],
+        heading: ['Poppins', 'system-ui', 'sans-serif'],
+        body: ['Poppins', 'system-ui', 'sans-serif'],
+        caption: ['Poppins', 'system-ui', 'sans-serif'],
+        data: ['Poppins', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', 'system-ui', 'sans-serif'],
+        mono: ['Poppins', 'system-ui', 'sans-serif'],
+        serif: ['Poppins', 'system-ui', 'sans-serif'],
       },
 
       fontSize: {

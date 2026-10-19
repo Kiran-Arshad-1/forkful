@@ -7,14 +7,16 @@ import BusinessMenuList from 'components/business/BusinessMenuList';
 import BusinessPhotoGallery from 'components/business/BusinessPhotoGallery';
 import BusinessMediaLightbox from 'components/business/BusinessMediaLightbox';
 import BusinessProfileHeader from 'components/business/BusinessProfileHeader';
+import ReviewsTab from '../vendor-dashboard/components/ReviewsTab';
 import { formatBusinessLabel } from 'components/business/BusinessDetailsView';
 import { supabase } from '../../lib/supabase';
-import { detectPhotoCategory, fetchMenuItemsByBusiness, fetchOpeningHours } from '../../services/vendorProfileService';
+import { detectPhotoCategory, fetchBusinessReviews, fetchMenuItemsByBusiness, fetchOpeningHours } from '../../services/vendorProfileService';
 
 const TABS = [
   { id: 'overview', label: 'Overview', icon: 'Info' },
   { id: 'menu', label: 'Menu', icon: 'UtensilsCrossed' },
   { id: 'photos', label: 'Photos', icon: 'Images' },
+  { id: 'reviews', label: 'Reviews', icon: 'Star' },
 ];
 
 const getPhotoUrl = (photo) => {
@@ -28,6 +30,8 @@ const AdminBusinessDetails = () => {
   const [business, setBusiness] = useState(null);
   const [openingHours, setOpeningHours] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsError, setReviewsError] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('overview');
@@ -151,13 +155,42 @@ const AdminBusinessDetails = () => {
     });
   };
 
+  const loadReviews = useCallback(async () => {
+    setReviewsError('');
+    try {
+      const loadedReviews = await fetchBusinessReviews(businessId);
+      setReviews(loadedReviews);
+      return loadedReviews;
+    } catch (reviewsLoadError) {
+      setReviewsError(reviewsLoadError.message || 'Reviews could not be loaded.');
+      return [];
+    }
+  }, [businessId]);
+
+  const deleteReview = async (reviewId) => {
+    const { error: deleteError } = await supabase
+      .from('business_reviews')
+      .delete()
+      .eq('review_id', reviewId)
+      .eq('business_id', businessId);
+
+    if (deleteError) {
+      setToast(`Error: ${deleteError.message}`);
+      return;
+    }
+
+    setReviews((current) => current.filter((review) => review.id !== reviewId));
+    setBusiness((current) => ({ ...current, review_count: Math.max(0, Number(current.review_count || 0) - 1) }));
+    setToast('Review deleted successfully.');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[#0F1A5C]">
         <AdminNavigation isCollapsed activeSection="businesses" />
         <main className="min-h-screen lg:ml-[72px] flex items-center justify-center px-6">
           <div className="text-center">
-            <div className="w-10 h-10 mx-auto rounded-full border-4 border-[#C9A84C]/30 border-t-[#C9A84C] animate-spin" />
+            <div className="w-10 h-10 mx-auto rounded-full border-4 border-[#FBC33B]/30 border-t-[#FBC33B] animate-spin" />
             <p className="mt-4 text-sm text-[#9BA4E8]">Loading business details...</p>
           </div>
         </main>
@@ -174,7 +207,7 @@ const AdminBusinessDetails = () => {
             <span className="mx-auto w-14 h-14 rounded-full bg-red-500/10 flex items-center justify-center"><Icon name="CircleAlert" size={25} color="#F87171" /></span>
             <h1 className="mt-4 text-xl font-bold text-white">Business unavailable</h1>
             <p className="mt-2 text-sm text-[#9BA4E8]">{error}</p>
-            <button type="button" onClick={() => navigate('/admin-dashboard?section=businesses')} className="mt-6 px-5 py-2.5 rounded-lg bg-[#C9A84C] text-[#0F1A5C] text-sm font-bold">Back to businesses</button>
+            <button type="button" onClick={() => navigate('/admin-dashboard?section=businesses')} className="mt-6 px-5 py-2.5 rounded-lg bg-[#FBC33B] text-[#0F1A5C] text-sm font-bold">Back to businesses</button>
           </div>
         </main>
       </div>
@@ -224,9 +257,9 @@ const AdminBusinessDetails = () => {
 
           <nav className="mt-6 flex gap-2 overflow-x-auto border-b border-[#2A377D]" aria-label="Business details sections">
             {TABS.map((tab) => {
-              const count = tab.id === 'menu' ? menuItems.length : tab.id === 'photos' ? photos.length : null;
+              const count = tab.id === 'menu' ? menuItems.length : tab.id === 'photos' ? photos.length : tab.id === 'reviews' ? (reviews.length || business.review_count || 0) : null;
               return (
-                <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id ? 'border-[#C9A84C] text-[#C9A84C]' : 'border-transparent text-[#9BA4E8] hover:text-white'}`}>
+                <button key={tab.id} type="button" onClick={() => setActiveTab(tab.id)} className={`flex items-center gap-2 px-5 py-3.5 text-sm font-bold whitespace-nowrap border-b-2 transition-colors ${activeTab === tab.id ? 'border-[#FBC33B] text-[#FBC33B]' : 'border-transparent text-[#9BA4E8] hover:text-white'}`}>
                   <Icon name={tab.icon} size={16} />{tab.label}{count !== null && <span className="px-2 py-0.5 rounded-full bg-[#27367D] text-[10px]">{count}</span>}
                 </button>
               );
@@ -237,13 +270,26 @@ const AdminBusinessDetails = () => {
             {activeTab === 'overview' && <BusinessDetailsView business={business} openingHours={openingHours} showSystemInfo />}
             {activeTab === 'menu' && <BusinessMenuList items={menuItems} onSelectImage={openMenuImage} />}
             {activeTab === 'photos' && <BusinessPhotoGallery photos={photos} compact showCategoryBadges />}
+            {activeTab === 'reviews' && (
+              <>
+                {reviewsError && <div className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3"><div><p className="text-sm font-bold text-red-300">Reviews could not be loaded</p><p className="mt-0.5 text-xs text-red-200/80">{reviewsError}</p></div><button type="button" onClick={loadReviews} className="rounded-lg bg-[#FBC33B] px-3 py-2 text-xs font-bold text-[#071A45]">Try again</button></div>}
+                <ReviewsTab
+                  adminMode
+                  business={business}
+                  businessId={businessId}
+                  reviews={reviews}
+                  onLoadReviews={loadReviews}
+                  onDeleteReview={deleteReview}
+                />
+              </>
+            )}
           </div>
         </div>
       </main>
 
       <BusinessMediaLightbox items={lightbox.items} currentIndex={lightbox.index} isOpen={lightbox.open} onClose={() => setLightbox((current) => ({ ...current, open: false }))} onChangeIndex={(index) => setLightbox((current) => ({ ...current, index }))} />
 
-      {toast && <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-[#C9A84C]/40 bg-[#1B2A8B] px-4 py-3 text-sm text-white shadow-xl flex items-center gap-2"><Icon name={toast.startsWith('Error:') ? 'CircleAlert' : 'CheckCircle'} size={16} color={toast.startsWith('Error:') ? '#F87171' : '#10B981'} />{toast}</div>}
+      {toast && <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-xl border border-[#FBC33B]/40 bg-[#1B2A8B] px-4 py-3 text-sm text-white shadow-xl flex items-center gap-2"><Icon name={toast.startsWith('Error:') ? 'CircleAlert' : 'CheckCircle'} size={16} color={toast.startsWith('Error:') ? '#F87171' : '#10B981'} />{toast}</div>}
     </div>
   );
 };

@@ -24,6 +24,7 @@ const TrailsPanel = ({
   error = '',
   onRetry,
   onFetchTrailDetails,
+  onFetchTrailReviews,
   onSaveTrail,
   onSetTrailStatus,
 }) => {
@@ -41,6 +42,7 @@ const TrailsPanel = ({
   const [detailTrail, setDetailTrail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState('');
+  const [detailInitialTab, setDetailInitialTab] = useState('details');
   const detailRequestRef = useRef(0);
 
   useEffect(() => {
@@ -116,10 +118,11 @@ const TrailsPanel = ({
     setShowEditor(true);
   };
 
-  const loadTrailDetails = async (trail) => {
+  const loadTrailDetails = async (trail, initialTab = 'details') => {
     const requestId = detailRequestRef.current + 1;
     detailRequestRef.current = requestId;
     setDetailTrail(trail);
+    setDetailInitialTab(initialTab);
     setDetailError('');
     setDetailLoading(true);
     try {
@@ -222,7 +225,7 @@ const TrailsPanel = ({
     }
   };
 
-  if (loading) return <div className="flex justify-center py-20"><div className="w-9 h-9 rounded-full border-4 animate-spin" style={{ borderColor: 'rgba(201,168,76,0.25)', borderTopColor: '#C9A84C' }} /></div>;
+  if (loading) return <div className="flex justify-center py-20"><div className="w-9 h-9 rounded-full border-4 animate-spin" style={{ borderColor: 'rgba(251, 195, 59,0.25)', borderTopColor: '#FBC33B' }} /></div>;
 
   if (error) return (
     <div className="rounded-xl py-14 px-5 text-center bg-card border border-border">
@@ -245,7 +248,7 @@ const TrailsPanel = ({
           <div key={item.label} className="rounded-xl p-4 bg-card border border-border">
             <div className="flex items-center justify-between gap-3">
               <div><p className="text-xs text-[#9BA4E8]">{item.label}</p><p className="mt-1 text-2xl font-bold text-white font-data">{item.value}</p></div>
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#C9A84C]/10"><Icon name={item.icon} size={19} color="#C9A84C" /></div>
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-[#FBC33B]/10"><Icon name={item.icon} size={19} color="#FBC33B" /></div>
             </div>
           </div>
         ))}
@@ -278,6 +281,8 @@ const TrailsPanel = ({
           onClose={closeDetails}
           onRetry={() => loadTrailDetails(detailTrail)}
           onEdit={editFromDetails}
+          onFetchReviews={onFetchTrailReviews}
+          initialTab={detailInitialTab}
         />
       )}
 

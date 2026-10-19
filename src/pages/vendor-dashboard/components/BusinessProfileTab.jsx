@@ -340,7 +340,7 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
           const pinIcon = L?.divIcon({
             html: `<div style="width:28px;height:36px;position:relative;">
               <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
-                <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#C9A84C"/>
+                <path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/>
                 <circle cx="14" cy="14" r="6" fill="#0F1A5C"/>
               </svg>
             </div>`,

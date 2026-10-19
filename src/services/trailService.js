@@ -31,23 +31,7 @@ const TRAILS_SELECT = `
   )
 `;
 
-const TRAIL_DETAILS_SELECT = `
-  ${TRAILS_SELECT},
-  reviews:trail_reviews(
-    id,
-    user_id,
-    trail_id,
-    rating,
-    comment,
-    images_paths,
-    reviewer:users!trail_reviews_user_id_fkey(
-      uuid,
-      name,
-      username,
-      profile_photo_url
-    )
-  )
-`;
+const TRAIL_DETAILS_SELECT = TRAILS_SELECT;
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
@@ -74,8 +58,33 @@ export async function fetchTrailDetails(trailId) {
   return {
     ...data,
     stops: [...(data?.stops ?? [])].sort((a, b) => a.stop_order - b.stop_order),
-    reviews: [...(data?.reviews ?? [])].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
   };
+}
+
+export async function fetchTrailReviews(trailId) {
+  const { data, error } = await supabase
+    .from('trail_reviews')
+    .select(`
+      id,
+      user_id,
+      trail_id,
+      rating,
+      comment,
+      images_paths,
+      created_at,
+      updated_at,
+      reviewer:users!trail_reviews_user_id_fkey(
+        uuid,
+        name,
+        username,
+        profile_photo_url
+      )
+    `)
+    .eq('trail_id', trailId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
 }
 
 async function assertActiveStops(stops) {

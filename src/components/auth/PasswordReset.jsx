@@ -21,7 +21,7 @@ const updateSchema = z
 
 const inputStyle = (hasError) => ({
   background: '#0F1A5C',
-  border: `1px solid ${hasError ? '#F87171' : 'rgba(201,168,76,0.3)'}`,
+  border: `1px solid ${hasError ? '#F87171' : 'rgba(251, 195, 59,0.3)'}`,
   color: '#FFFFFF',
 });
 
@@ -90,7 +90,7 @@ const PasswordReset = () => {
       <div className="w-full max-w-md">
         <div
           className="rounded-2xl p-8 md:p-10"
-          style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)', boxShadow: '0 8px 32px rgba(201,168,76,0.15)' }}
+          style={{ background: '#1B2A8B', border: '1px solid rgba(251, 195, 59,0.3)', boxShadow: '0 8px 32px rgba(251, 195, 59,0.15)' }}
         >
           <div className="flex justify-center mb-6">
             <img src="/assets/images/IG_Post-1772727015258.png" alt="ForkFul" className="h-14 w-auto object-contain" />
@@ -102,9 +102,9 @@ const PasswordReset = () => {
               <div className="text-center mb-8">
                 <div
                   className="w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-4"
-                  style={{ background: 'rgba(201,168,76,0.15)' }}
+                  style={{ background: 'rgba(251, 195, 59,0.15)' }}
                 >
-                  <Icon name="KeyRound" size={24} color="#C9A84C" />
+                  <Icon name="KeyRound" size={24} color="#FBC33B" />
                 </div>
                 <h1 className="text-2xl font-bold font-heading" style={{ color: '#FFFFFF' }}>Reset Password</h1>
                 <p className="text-sm mt-1 font-body" style={{ color: '#9BA4E8' }}>
@@ -146,7 +146,7 @@ const PasswordReset = () => {
                   type="submit"
                   disabled={requestForm.formState.isSubmitting}
                   className="w-full h-11 rounded-lg font-bold text-sm transition-all hover:opacity-90 disabled:opacity-50"
-                  style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                  style={{ background: '#FBC33B', color: '#0F1A5C' }}
                 >
                   {requestForm.formState.isSubmitting ? 'Sending…' : 'Send Reset Link'}
                 </button>
@@ -241,7 +241,7 @@ const PasswordReset = () => {
                   type="submit"
                   disabled={updateForm.formState.isSubmitting}
                   className="w-full h-11 rounded-lg font-bold text-sm transition-all hover:opacity-90 disabled:opacity-50"
-                  style={{ background: '#C9A84C', color: '#0F1A5C' }}
+                  style={{ background: '#FBC33B', color: '#0F1A5C' }}
                 >
                   {updateForm.formState.isSubmitting ? 'Updating…' : 'Update Password'}
                 </button>
@@ -252,7 +252,7 @@ const PasswordReset = () => {
           {phase !== 'update' && (
             <p className="mt-6 text-center text-sm font-body" style={{ color: '#9BA4E8' }}>
               Remember it?{' '}
-              <Link to="/vendor-login" className="font-semibold hover:underline" style={{ color: '#C9A84C' }}>
+              <Link to="/vendor-login" className="font-semibold hover:underline" style={{ color: '#FBC33B' }}>
                 Sign In
               </Link>
             </p>

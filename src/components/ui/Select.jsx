@@ -118,7 +118,7 @@ const Select = React.forwardRef(({
                     id={selectId}
                     type="button"
                     className={cn(
-                        "flex h-11 w-full items-center justify-between rounded-xl border border-[#C9A84C]/70 bg-[#081C49] text-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FBC33B]/40 focus:border-[#FBC33B] disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+                        "flex h-11 w-full items-center justify-between rounded-xl border border-[#FBC33B]/70 bg-[#081C49] text-white px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#FBC33B]/40 focus:border-[#FBC33B] disabled:cursor-not-allowed disabled:opacity-50 transition-all",
                         error && "border-[#FF4D5E] focus:ring-[#FF4D5E]/40",
                         !hasValue && "text-[#9FB5F5]"
                     )}
@@ -173,7 +173,7 @@ const Select = React.forwardRef(({
 
                 {/* Dropdown */}
                 {isOpen && (
-                    <div className="absolute z-50 w-full mt-1 bg-[#081C49] text-white border border-[#C9A84C]/70 rounded-xl shadow-2xl overflow-hidden">
+                    <div className="absolute z-50 w-full mt-1 bg-[#081C49] text-white border border-[#FBC33B]/70 rounded-xl shadow-2xl overflow-hidden">
                         {searchable && (
                             <div className="p-2 border-b border-[#254477]">
                                 <div className="relative">

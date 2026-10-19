@@ -4,7 +4,7 @@ import useAuthStore from '../../../store/authStore';
 
 
 const STATUS_CONFIG = {
-  trial: { label: 'Free Trial', color: '#C9A84C', bg: 'rgba(201,168,76,0.1)', border: 'rgba(201,168,76,0.3)', icon: 'Clock' },
+  trial: { label: 'Free Trial', color: '#FBC33B', bg: 'rgba(251, 195, 59,0.1)', border: 'rgba(251, 195, 59,0.3)', icon: 'Clock' },
   active: { label: 'Active', color: '#10B981', bg: 'rgba(16,185,129,0.1)', border: 'rgba(16,185,129,0.3)', icon: 'CheckCircle' },
   past_due: { label: 'Past Due', color: '#F87171', bg: 'rgba(248,113,113,0.1)', border: 'rgba(248,113,113,0.3)', icon: 'AlertCircle' },
   cancelled: { label: 'Cancelled', color: '#9BA4E8', bg: 'rgba(155,164,232,0.1)', border: 'rgba(155,164,232,0.3)', icon: 'XCircle' },
@@ -59,7 +59,7 @@ const BillingTab = () => {
   return (
     <div className="space-y-4 lg:space-y-6">
       {/* Subscription Status Card */}
-      <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
+      <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(251, 195, 59,0.3)' }}>
         <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Subscription Status</h3>
         <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-semibold"
@@ -84,10 +84,10 @@ const BillingTab = () => {
         </div>
 
         {/* Plan Details */}
-        <div className="mt-4 p-4 rounded-lg" style={{ background: 'rgba(201,168,76,0.08)', border: '1px solid rgba(201,168,76,0.2)' }}>
+        <div className="mt-4 p-4 rounded-lg" style={{ background: 'rgba(251, 195, 59,0.08)', border: '1px solid rgba(251, 195, 59,0.2)' }}>
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-semibold" style={{ color: '#FFFFFF' }}>Vendor Listing Plan</span>
-            <span className="text-sm font-bold font-data" style={{ color: '#C9A84C' }}>$5.99/month</span>
+            <span className="text-sm font-bold font-data" style={{ color: '#FBC33B' }}>$5.99/month</span>
           </div>
           <ul className="space-y-1.5">
             {['Business profile listing on ForkFul', 'Unlimited menu items', 'Up to 20 photos', 'Customer reviews & ratings', 'Performance insights & analytics']?.map(f => (
@@ -106,7 +106,7 @@ const BillingTab = () => {
               disabled={activating}
               onClick={handleActivate}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all duration-250 hover:opacity-90 disabled:opacity-50"
-              style={{ background: '#C9A84C', color: '#0F1A5C' }}
+              style={{ background: '#FBC33B', color: '#0F1A5C' }}
             >
               <Icon name="CreditCard" size={16} color="#0F1A5C" />
               {activating ? 'Processing...' : subStatus === 'cancelled' ? 'Reactivate Subscription' : 'Start Subscription — $5.99/mo'}
@@ -116,7 +116,7 @@ const BillingTab = () => {
             <button
               onClick={() => setShowCancelConfirm(true)}
               className="px-4 py-2 rounded-lg text-sm font-medium border transition-all duration-250"
-              style={{ borderColor: 'rgba(201,168,76,0.4)', color: '#9BA4E8' }}
+              style={{ borderColor: 'rgba(251, 195, 59,0.4)', color: '#9BA4E8' }}
             >
               Cancel Subscription
             </button>
@@ -133,7 +133,7 @@ const BillingTab = () => {
       </div>
 
       {/* Invoice History */}
-      <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)' }}>
+      <div className="rounded-xl p-4 md:p-6" style={{ background: '#1B2A8B', border: '1px solid rgba(251, 195, 59,0.3)' }}>
         <h3 className="font-heading text-lg font-semibold mb-4" style={{ color: '#FFFFFF' }}>Invoice History</h3>
         {mockInvoices?.length === 0 ? (
           <p className="text-sm text-center py-8" style={{ color: '#9BA4E8' }}>No invoices yet.</p>
@@ -141,7 +141,7 @@ const BillingTab = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ borderBottom: '1px solid rgba(201,168,76,0.2)' }}>
+                <tr style={{ borderBottom: '1px solid rgba(251, 195, 59,0.2)' }}>
                   <th className="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide" style={{ color: '#9BA4E8' }}>Invoice</th>
                   <th className="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide" style={{ color: '#9BA4E8' }}>Date</th>
                   <th className="text-left py-2 pr-4 text-xs font-semibold uppercase tracking-wide hidden sm:table-cell" style={{ color: '#9BA4E8' }}>Description</th>
@@ -151,11 +151,11 @@ const BillingTab = () => {
               </thead>
               <tbody>
                 {mockInvoices?.map(inv => (
-                  <tr key={inv?.id} className="transition-colors hover:bg-white/5" style={{ borderBottom: '1px solid rgba(201,168,76,0.1)' }}>
+                  <tr key={inv?.id} className="transition-colors hover:bg-white/5" style={{ borderBottom: '1px solid rgba(251, 195, 59,0.1)' }}>
                     <td className="py-3 pr-4 font-data text-xs" style={{ color: '#FFFFFF' }}>{inv?.id}</td>
                     <td className="py-3 pr-4 text-xs whitespace-nowrap" style={{ color: '#9BA4E8' }}>{inv?.date}</td>
                     <td className="py-3 pr-4 text-xs hidden sm:table-cell" style={{ color: '#9BA4E8' }}>{inv?.description}</td>
-                    <td className="py-3 pr-4 text-right font-data text-xs font-semibold whitespace-nowrap" style={{ color: '#C9A84C' }}>${inv?.amount}</td>
+                    <td className="py-3 pr-4 text-right font-data text-xs font-semibold whitespace-nowrap" style={{ color: '#FBC33B' }}>${inv?.amount}</td>
                     <td className="py-3 text-right">
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: 'rgba(16,185,129,0.1)', color: '#10B981', border: '1px solid rgba(16,185,129,0.3)' }}>
                         <Icon name="CheckCircle" size={11} color="#10B981" />

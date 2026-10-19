@@ -9,7 +9,7 @@ const Sb = ({ h = 'h-4', w = 'w-full', rounded = 'rounded-md', className = '' })
 const Card = ({ children, className = '' }) => (
   <div
     className={`rounded-xl p-4 md:p-6 ${className}`}
-    style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.15)' }}
+    style={{ background: '#1B2A8B', border: '1px solid rgba(251, 195, 59,0.15)' }}
   >
     {children}
   </div>

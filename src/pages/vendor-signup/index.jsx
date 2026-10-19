@@ -66,7 +66,7 @@ const VendorSignup = () => {
                 onClick={handleGoogleSignUp}
                 disabled={googleLoading}
                 className="w-full flex items-center justify-center gap-3 h-11 rounded-lg text-sm font-medium transition-all duration-250 mb-4 disabled:opacity-50 hover:opacity-90"
-                style={{ background: '#FFFFFF', color: '#1F2937', border: '1px solid rgba(201,168,76,0.3)' }}
+                style={{ background: '#FFFFFF', color: '#1F2937', border: '1px solid rgba(251, 195, 59,0.3)' }}
               >
                 {googleLoading ? (
                   <div className="w-4 h-4 rounded-full border-2 animate-spin"
@@ -82,9 +82,9 @@ const VendorSignup = () => {
               )}
 
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+                <div className="flex-1 h-px" style={{ background: 'rgba(251, 195, 59,0.2)' }} />
                 <span className="text-xs font-caption" style={{ color: '#9BA4E8' }}>or sign up with email</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(201,168,76,0.2)' }} />
+                <div className="flex-1 h-px" style={{ background: 'rgba(251, 195, 59,0.2)' }} />
               </div>
             </>
           )}

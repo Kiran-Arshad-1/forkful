@@ -54,13 +54,13 @@ const VendorDashboardTabs = ({ activeTab = 'business-profile', onTabChange }) =>
             <Icon
               name={tab?.icon}
               size={16}
-              color={activeTab === tab?.id ? '#C9A84C' : '#9BA4E8'}
+              color={activeTab === tab?.id ? '#FBC33B' : '#9BA4E8'}
             />
             <span>{tab?.label}</span>
             {tab?.incomplete && (
               <span
                 className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ background: '#C9A84C' }}
+                style={{ background: '#FBC33B' }}
                 aria-label="Incomplete"
                 title="This section is incomplete"
               />
@@ -86,9 +86,9 @@ const VendorDashboardTabs = ({ activeTab = 'business-profile', onTabChange }) =>
             <Icon
               name={activeTabData?.icon}
               size={16}
-              color="#C9A84C"
+              color="#FBC33B"
             />
-            <span style={{ color: '#C9A84C' }} className="font-semibold">{activeTabData?.label}</span>
+            <span style={{ color: '#FBC33B' }} className="font-semibold">{activeTabData?.label}</span>
           </span>
           <Icon
             name={expandedMobile ? 'ChevronUp' : 'ChevronDown'}
@@ -100,7 +100,7 @@ const VendorDashboardTabs = ({ activeTab = 'business-profile', onTabChange }) =>
         {expandedMobile && (
           <div
             id="mobile-tab-menu"
-            style={{ background: '#0F1A5C', borderTop: '1px solid rgba(201,168,76,0.3)' }}
+            style={{ background: '#0F1A5C', borderTop: '1px solid rgba(251, 195, 59,0.3)' }}
             role="tablist"
           >
             {TABS?.map((tab) => (
@@ -110,20 +110,20 @@ const VendorDashboardTabs = ({ activeTab = 'business-profile', onTabChange }) =>
                 aria-selected={activeTab === tab?.id}
                 className="flex items-center gap-3 w-full px-6 py-3 text-sm font-medium min-h-[44px] transition-all duration-250"
                 style={{
-                  color: activeTab === tab?.id ? '#C9A84C' : '#9BA4E8',
-                  background: activeTab === tab?.id ? 'rgba(201,168,76,0.1)' : 'transparent',
-                  borderLeft: activeTab === tab?.id ? '2px solid #C9A84C' : '2px solid transparent',
+                  color: activeTab === tab?.id ? '#FBC33B' : '#9BA4E8',
+                  background: activeTab === tab?.id ? 'rgba(251, 195, 59,0.1)' : 'transparent',
+                  borderLeft: activeTab === tab?.id ? '2px solid #FBC33B' : '2px solid transparent',
                 }}
                 onClick={() => handleTabClick(tab?.id)}
               >
                 <Icon
                   name={tab?.icon}
                   size={16}
-                  color={activeTab === tab?.id ? '#C9A84C' : '#9BA4E8'}
+                  color={activeTab === tab?.id ? '#FBC33B' : '#9BA4E8'}
                 />
                 <span>{tab?.label}</span>
                 {tab?.incomplete && (
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#C9A84C' }} aria-label="Incomplete" />
+                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: '#FBC33B' }} aria-label="Incomplete" />
                 )}
                 {tab?.badge !== null && tab?.badge > 0 && (
                   <span className="tab-badge ml-auto" aria-label={`${tab?.badge} new`}>

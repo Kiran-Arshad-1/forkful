@@ -23,7 +23,7 @@ const BusinessPhotoGallery = ({ photos = [], emptyMessage = 'No photos uploaded 
     <>
       <div className={`grid grid-cols-2 ${compact ? 'sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5' : 'sm:grid-cols-3'} gap-3 sm:gap-4`}>
         {items.map((item, index) => (
-          <button key={item.id} type="button" onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }} className={`relative ${compact ? 'aspect-[4/3]' : 'aspect-square'} rounded-xl overflow-hidden group border border-[#2A377D] hover:border-[#C9A84C]/60 transition-all text-left bg-[#081C49]`}>
+          <button key={item.id} type="button" onClick={() => { setLightboxIndex(index); setLightboxOpen(true); }} className={`relative ${compact ? 'aspect-[4/3]' : 'aspect-square'} rounded-xl overflow-hidden group border border-[#2A377D] hover:border-[#FBC33B]/60 transition-all text-left bg-[#081C49]`}>
             <img src={item.photo_url} alt={item.caption} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
             <span className="absolute inset-x-0 bottom-0 pt-8 px-3 py-2 text-[10px] font-semibold text-white truncate opacity-0 group-hover:opacity-100 transition-opacity" style={{ background: 'linear-gradient(transparent, rgba(6,21,56,.92))' }}>{item.caption}</span>
             {showCategoryBadges && (() => {

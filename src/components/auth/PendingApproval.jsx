@@ -28,30 +28,30 @@ const PendingApproval = () => {
 
         <div
           className="rounded-2xl p-8 md:p-10"
-          style={{ background: '#1B2A8B', border: '1px solid rgba(201,168,76,0.3)', boxShadow: '0 8px 32px rgba(201,168,76,0.15)' }}
+          style={{ background: '#1B2A8B', border: '1px solid rgba(251, 195, 59,0.3)', boxShadow: '0 8px 32px rgba(251, 195, 59,0.15)' }}
         >
           {/* Icon */}
           <div
             className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6"
-            style={{ background: 'rgba(201,168,76,0.15)', border: '2px solid rgba(201,168,76,0.4)' }}
+            style={{ background: 'rgba(251, 195, 59,0.15)', border: '2px solid rgba(251, 195, 59,0.4)' }}
           >
-            <Icon name="Clock" size={36} color="#C9A84C" />
+            <Icon name="Clock" size={36} color="#FBC33B" />
           </div>
 
           <h1 className="text-2xl font-bold font-heading mb-3" style={{ color: '#FFFFFF' }}>
             Your Account Is Under Review
           </h1>
           <p className="text-sm font-body mb-6" style={{ color: '#9BA4E8' }}>
-            Thanks for joining ForkFul, <span style={{ color: '#C9A84C' }}>{profile?.business_name || 'vendor'}</span>!
+            Thanks for joining ForkFul, <span style={{ color: '#FBC33B' }}>{profile?.business_name || 'vendor'}</span>!
             Our team is reviewing your application and will get back to you within <strong style={{ color: '#FFFFFF' }}>1–2 business days</strong>.
           </p>
 
           {/* What happens next */}
           <div
             className="rounded-xl p-5 mb-6 text-left"
-            style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)' }}
+            style={{ background: 'rgba(251, 195, 59,0.07)', border: '1px solid rgba(251, 195, 59,0.2)' }}
           >
-            <p className="text-xs font-semibold font-caption uppercase tracking-wide mb-3" style={{ color: '#C9A84C' }}>
+            <p className="text-xs font-semibold font-caption uppercase tracking-wide mb-3" style={{ color: '#FBC33B' }}>
               What happens next
             </p>
             {[
@@ -60,7 +60,7 @@ const PendingApproval = () => {
               { icon: 'Store',       text: 'Your listing will go live after you complete your profile and activate it.' },
             ].map(({ icon, text }) => (
               <div key={icon} className="flex items-start gap-3 mb-2 last:mb-0">
-                <Icon name={icon} size={15} color="#C9A84C" className="flex-shrink-0 mt-0.5" />
+                <Icon name={icon} size={15} color="#FBC33B" className="flex-shrink-0 mt-0.5" />
                 <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>{text}</p>
               </div>
             ))}
@@ -68,7 +68,7 @@ const PendingApproval = () => {
 
           <p className="text-sm font-body mb-6" style={{ color: '#9BA4E8' }}>
             Questions? Email us at{' '}
-            <a href="mailto:support@forkfulbb.com" className="hover:underline" style={{ color: '#C9A84C' }}>
+            <a href="mailto:support@forkfulbb.com" className="hover:underline" style={{ color: '#FBC33B' }}>
               support@forkfulbb.com
             </a>
           </p>

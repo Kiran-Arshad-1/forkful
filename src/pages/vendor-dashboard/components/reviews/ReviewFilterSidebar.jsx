@@ -13,6 +13,7 @@ const ReviewFilterSidebar = ({
   recentReviews = [],
   onSelectReview,
   onViewAllReviews,
+  showRecentReviews = true,
 }) => {
   return (
     <div className="w-full space-y-6">
@@ -113,7 +114,7 @@ const ReviewFilterSidebar = ({
       </div>
 
       {/* ── 2. Recent Reviews Quick Sidebar Preview ── */}
-      {recentReviews.length > 0 && (
+      {showRecentReviews && recentReviews.length > 0 && (
         <div
           className="rounded-3xl p-5 sm:p-6 space-y-4"
           style={{

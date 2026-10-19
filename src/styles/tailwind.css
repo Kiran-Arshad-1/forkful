@@ -1,8 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -74,10 +70,10 @@
   --color-destructive-foreground: #FFFFFF;
 
   /* Typography */
-  --font-heading: 'Inter', 'Source Sans 3', system-ui, sans-serif;
-  --font-body: 'Source Sans 3', system-ui, sans-serif;
-  --font-caption: 'Nunito Sans', system-ui, sans-serif;
-  --font-data: 'JetBrains Mono', monospace;
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Poppins', system-ui, sans-serif;
+  --font-caption: 'Poppins', system-ui, sans-serif;
+  --font-data: 'Poppins', system-ui, sans-serif;
 
   /* Shadows - gold tinted */
   --shadow-sm: 0 2px 4px rgba(251, 195, 59, 0.12);
@@ -213,7 +209,7 @@ button:active, [role="button"]:active {
   background: var(--color-muted);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(201, 168, 76, 0.4);
+  background: rgba(251, 195, 59, 0.4);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -228,7 +224,7 @@ button:active, [role="button"]:active {
   right: 0;
   z-index: var(--z-navigation);
   background: #0F1A5C;
-  border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+  border-bottom: 1px solid rgba(251, 195, 59, 0.3);
   box-shadow: var(--shadow-sm);
   height: 64px;
 }
@@ -261,7 +257,7 @@ button:active, [role="button"]:active {
   top: 64px;
   z-index: 99;
   background: #0F1A5C;
-  border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+  border-bottom: 1px solid rgba(251, 195, 59, 0.3);
   box-shadow: var(--shadow-sm);
 }
 
@@ -287,13 +283,13 @@ button:active, [role="button"]:active {
 }
 
 .vendor-tab-item:hover {
-  color: #C9A84C;
-  background: rgba(201, 168, 76, 0.08);
+  color: #FBC33B;
+  background: rgba(251, 195, 59, 0.08);
 }
 
 .vendor-tab-item.active {
-  color: #C9A84C;
-  border-bottom-color: #C9A84C;
+  color: #FBC33B;
+  border-bottom-color: #FBC33B;
 }
 
 .vendor-tab-item .tab-badge {
@@ -302,7 +298,7 @@ button:active, [role="button"]:active {
   justify-content: center;
   width: 18px;
   height: 18px;
-  background: #C9A84C;
+  background: #FBC33B;
   color: #0F1A5C;
   border-radius: 50%;
   font-size: 0.65rem;
@@ -317,7 +313,7 @@ button:active, [role="button"]:active {
   height: 100vh;
   width: 260px;
   background: #0F1A5C;
-  border-right: 1px solid rgba(201, 168, 76, 0.3);
+  border-right: 1px solid rgba(251, 195, 59, 0.3);
   box-shadow: var(--shadow-md);
   z-index: var(--z-navigation);
   display: flex;
@@ -336,7 +332,7 @@ button:active, [role="button"]:active {
   gap: 12px;
   padding: 0 16px;
   height: 64px;
-  border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+  border-bottom: 1px solid rgba(251, 195, 59, 0.3);
   flex-shrink: 0;
 }
 
@@ -381,14 +377,14 @@ button:active, [role="button"]:active {
 }
 
 .admin-nav-item:hover {
-  color: #C9A84C;
-  background: rgba(201, 168, 76, 0.1);
+  color: #FBC33B;
+  background: rgba(251, 195, 59, 0.1);
   transform: translateX(2px);
 }
 
 .admin-nav-item.active {
-  color: #C9A84C;
-  background: rgba(201, 168, 76, 0.15);
+  color: #FBC33B;
+  background: rgba(251, 195, 59, 0.15);
   font-weight: 600;
 }
 
@@ -400,7 +396,7 @@ button:active, [role="button"]:active {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: #C9A84C;
+  background: #FBC33B;
   color: #0F1A5C;
   border-radius: 10px;
   font-size: 0.65rem;
@@ -427,7 +423,7 @@ button:active, [role="button"]:active {
   right: 0;
   z-index: var(--z-navigation);
   background: #0F1A5C;
-  border-bottom: 1px solid rgba(201, 168, 76, 0.3);
+  border-bottom: 1px solid rgba(251, 195, 59, 0.3);
   height: 64px;
 }
 
@@ -510,4 +506,4 @@ select:-webkit-autofill:active {
   caret-color: #FFFFFF !important;
   border-color: #1D4ED8 !important;
   transition: background-color 5000000s ease-in-out 0s;
-}
+}

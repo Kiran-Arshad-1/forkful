@@ -165,7 +165,7 @@ const AdminVendorDetails = () => {
                   })}
                 </div>
               ) : (
-                <div className="py-12 text-center rounded-xl bg-[#081C49] border border-[#254477]"><Icon name="Store" size={32} color="#647DBA" className="mx-auto" /><p className="mt-3 text-sm font-semibold text-white">No businesses found</p><p className="mt-1 text-xs text-[#9FB5F5]">This vendor has not created a business yet.</p></div>
+                <div className="py-12 text-center flex flex-col justify-center items-center rounded-xl bg-[#081C49] border border-[#254477]"><Icon name="Store" size={32} color="#647DBA" className="mx-auto" /><p className="mt-3 text-sm font-semibold text-white">No businesses found</p><p className="mt-1 text-xs text-[#9FB5F5]">This vendor has not created a business yet.</p></div>
               )}
             </div>
           </section>

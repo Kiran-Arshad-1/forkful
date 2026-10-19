@@ -5,13 +5,12 @@ import StarRating from '../common/StarRating';
 
 // Initials avatar fallback
 const InitialsAvatar = ({ name }) => {
-  const initials = (name ?? 'Customer')
+  const nameParts = (name ?? 'Customer')
     .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || 'CU';
+    .filter(Boolean);
+  const initials = (nameParts.length > 1
+    ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+    : nameParts[0]?.slice(0, 2) || 'CU').toUpperCase();
 
   return (
     <div
@@ -43,14 +42,18 @@ const ReviewCard = ({
   onReply,
   onDeleteReply,
   onSelectPhoto,
+  allowReplies = true,
+  onDeleteReview,
 }) => {
   const [isReplying, setIsReplying] = useState(false);
   const [replyText, setReplyText] = useState(review.owner_reply || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showReviewDeleteConfirm, setShowReviewDeleteConfirm] = useState(false);
+  const [avatarFailed, setAvatarFailed] = useState(false);
 
   const reviewerName = review.profiles?.full_name || review.username || 'Valued Customer';
-  const reviewerAvatar = review.profiles?.user_avatar;
+  const reviewerAvatar = review.profiles?.avatar_url || review.profiles?.user_avatar;
   const timeAgo = formatTimeAgo(review.created_at);
   const replyTimeAgo = formatTimeAgo(review.owner_reply_at);
 
@@ -88,11 +91,12 @@ const ReviewCard = ({
     >
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3 min-w-0">
-          {reviewerAvatar ? (
+          {reviewerAvatar && !avatarFailed ? (
             <img
               src={reviewerAvatar}
               alt={reviewerName}
               className="w-10 h-10 rounded-xl object-cover border border-[#1D4ED8] flex-shrink-0"
+              onError={() => setAvatarFailed(true)}
             />
           ) : (
             <InitialsAvatar name={reviewerName} />
@@ -113,7 +117,8 @@ const ReviewCard = ({
         </div>
 
         {/* Reply Action Trigger (if not already replying or replied) */}
-        {!review.owner_reply && !isReplying && (
+        <div className="flex items-center gap-2">
+        {allowReplies && !review.owner_reply && !isReplying && (
           <button
             onClick={() => {
               setReplyText('');
@@ -130,6 +135,20 @@ const ReviewCard = ({
             <span>Reply</span>
           </button>
         )}
+        {onDeleteReview && (
+          showReviewDeleteConfirm ? (
+            <div className="flex items-center gap-1.5 rounded-xl border border-red-400/30 bg-red-500/10 px-2 py-1.5">
+              <span className="text-[10px] font-semibold text-red-200">Delete review?</span>
+              <button type="button" disabled={isSubmitting} onClick={async () => { setIsSubmitting(true); try { await onDeleteReview(review.id); } finally { setIsSubmitting(false); } }} className="rounded-md bg-red-500 px-2 py-1 text-[10px] font-bold text-white disabled:opacity-50">Delete</button>
+              <button type="button" disabled={isSubmitting} onClick={() => setShowReviewDeleteConfirm(false)} className="px-1 text-[10px] font-semibold text-[#9FB5F5] hover:text-white">Cancel</button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => setShowReviewDeleteConfirm(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-red-400/30 bg-red-500/10 px-3 py-1.5 text-xs font-bold text-red-300 hover:bg-red-500/20" title="Delete review">
+              <Icon name="Trash2" size={13} /> Delete
+            </button>
+          )
+        )}
+        </div>
       </div>
 
       {/* Review Comment Text */}
@@ -170,7 +189,7 @@ const ReviewCard = ({
       </div>
 
       {/* Inline Reply Editor (when writing or editing a reply) */}
-      {isReplying && (
+      {allowReplies && isReplying && (
         <div
           className="rounded-2xl p-4 space-y-3 animate-in fade-in duration-200 border"
           style={{ background: '#081C49', borderColor: '#1D4ED8' }}
@@ -247,7 +266,7 @@ const ReviewCard = ({
             </div>
 
             {/* Edit / Delete Reply Actions */}
-            <div className="flex items-center gap-1.5">
+            {allowReplies && <div className="flex items-center gap-1.5">
               {showDeleteConfirm ? (
                 <div className="flex items-center gap-1 animate-in fade-in">
                   <span className="text-[10px] text-white">Delete reply?</span>
@@ -286,7 +305,7 @@ const ReviewCard = ({
                   </button>
                 </>
               )}
-            </div>
+            </div>}
           </div>
 
           <p className="text-xs leading-relaxed" style={{ color: '#DCE6FF' }}>

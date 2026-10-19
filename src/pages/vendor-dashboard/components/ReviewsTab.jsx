@@ -39,16 +39,25 @@ const ReviewsTab = ({
   onNavigatePhotos,
   onBackToBusinesses,
   onAddBusiness,
+  business: businessOverride,
+  businessId: businessIdOverride,
+  reviews: reviewsOverride,
+  onLoadReviews,
+  onDeleteReview,
+  adminMode = false,
 }) => {
   const {
-    reviews = [],
+    reviews: storeReviews = [],
     fetchReviews,
-    selectedBusinessId,
+    selectedBusinessId: storeSelectedBusinessId,
     vendor_business,
     replyToReview,
     deleteReviewReply,
     startCreateBusiness,
   } = useVendorProfileStore();
+
+  const reviews = reviewsOverride ?? storeReviews;
+  const selectedBusinessId = businessIdOverride ?? storeSelectedBusinessId;
 
   const [tabLoading, setTabLoading] = useState(false);
   const [toast, setToast] = useState(null);
@@ -71,8 +80,9 @@ const ReviewsTab = ({
       return;
     }
     setTabLoading(true);
-    fetchReviews(selectedBusinessId).finally(() => setTabLoading(false));
-  }, [selectedBusinessId]);
+    const loader = onLoadReviews || fetchReviews;
+    Promise.resolve(loader(selectedBusinessId)).finally(() => setTabLoading(false));
+  }, [selectedBusinessId, onLoadReviews, fetchReviews]);
 
   const showToast = (msg, isError = false) => {
     setToast({ msg, isError });
@@ -80,9 +90,9 @@ const ReviewsTab = ({
   };
 
   // Current business details
-  const selectedBusiness = Array.isArray(vendor_business)
+  const selectedBusiness = businessOverride || (Array.isArray(vendor_business)
     ? vendor_business.find((b) => b.id === selectedBusinessId) || vendor_business[0]
-    : null;
+    : null);
 
   // Filtered & Sorted Reviews
   const filteredReviews = useMemo(() => {
@@ -165,7 +175,7 @@ const ReviewsTab = ({
   if (tabLoading) return <ReviewsSkeleton />;
 
   // Zero-business fallback
-  if (!Array.isArray(vendor_business) || vendor_business.length === 0) {
+  if (!adminMode && (!Array.isArray(vendor_business) || vendor_business.length === 0)) {
     return (
       <div
         className="rounded-3xl p-10 sm:p-14 flex flex-col items-center justify-center text-center shadow-xl"
@@ -224,7 +234,7 @@ const ReviewsTab = ({
       )}
 
       {/* ── 1. Reusable Hero Header Banner (Total Customers & verified badge skipped per instructions) ── */}
-      <TabHeroHeader
+      {!adminMode && <TabHeroHeader
         business={selectedBusiness}
         onBackToBusinesses={onBackToBusinesses}
         metaRow={
@@ -255,7 +265,7 @@ const ReviewsTab = ({
             onClick: onNavigatePhotos,
           },
         ]}
-      />
+      />}
 
       {/* ── 2. Reviews Summary Card (Average rating, 5-to-1 breakdown bars, total reviews, response rate) ── */}
       <ReviewsSummaryCard
@@ -340,9 +350,11 @@ const ReviewsTab = ({
                 <ReviewCard
                   key={review.id}
                   review={review}
-                  onReply={handleReply}
-                  onDeleteReply={handleDeleteReply}
+                  onReply={adminMode ? undefined : handleReply}
+                  onDeleteReply={adminMode ? undefined : handleDeleteReply}
                   onSelectPhoto={handleOpenPhotoLightbox}
+                  allowReplies={!adminMode}
+                  onDeleteReview={adminMode ? onDeleteReview : undefined}
                 />
               ))}
             </div>
@@ -366,6 +378,7 @@ const ReviewsTab = ({
               if (el) el.scrollIntoView({ behavior: 'smooth' });
             }}
             onViewAllReviews={handleResetFilters}
+            showRecentReviews={!adminMode}
           />
         </div>
       </div>

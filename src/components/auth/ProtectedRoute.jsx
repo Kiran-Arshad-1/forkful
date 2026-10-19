@@ -7,7 +7,7 @@ const Spinner = () => (
     <div className="flex flex-col items-center gap-4">
       <div
         className="w-12 h-12 rounded-full border-4 animate-spin"
-        style={{ borderColor: 'rgba(201,168,76,0.3)', borderTopColor: '#C9A84C' }}
+        style={{ borderColor: 'rgba(251, 195, 59,0.3)', borderTopColor: '#FBC33B' }}
       />
       <p className="text-sm font-body" style={{ color: '#9BA4E8' }}>Loading…</p>
     </div>

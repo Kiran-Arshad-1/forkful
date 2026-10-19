@@ -69,7 +69,7 @@ const RejectedAccount = () => {
           <a
             href="mailto:support@forkfulbb.com?subject=Application%20Appeal%20-%20ForkFul"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all hover:opacity-90 mb-4"
-            style={{ background: '#C9A84C', color: '#0F1A5C' }}
+            style={{ background: '#FBC33B', color: '#0F1A5C' }}
           >
             <Icon name="Mail" size={15} color="#0F1A5C" />
             Contact Support

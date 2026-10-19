@@ -299,6 +299,17 @@ export function getReviewImageUrl(path) {
   return data?.publicUrl || path;
 }
 
+function getProfilePhotoUrl(path) {
+  if (!path || typeof path !== 'string') return '';
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const cleanPath = path.replace(/^\/+/, '');
+  const bucketPrefix = `${PROFILE_PHOTOS_BUCKET}/`;
+  const storagePath = cleanPath.startsWith(bucketPrefix) ? cleanPath.slice(bucketPrefix.length) : cleanPath;
+  const { data } = supabase.storage.from(PROFILE_PHOTOS_BUCKET).getPublicUrl(storagePath);
+  return data?.publicUrl || '';
+}
+
 function normalizeBusinessReview(review) {
   let images = [];
   if (Array.isArray(review.images_paths)) {
@@ -333,7 +344,7 @@ function normalizeBusinessReview(review) {
     username: review.username || review.reviewer?.username,
     profiles: {
       full_name: review.user_name || review.reviewer?.name,
-      avatar_url: review.reviewer?.profile_photo_url,
+      avatar_url: getProfilePhotoUrl(review.reviewer?.profile_photo_url),
     },
   };
 }
