@@ -7,7 +7,17 @@ function App() {
 
   // Resolve the Supabase session once on mount and subscribe to auth state changes
   useEffect(() => {
-    initAuth();
+    let active = true;
+    let cleanup;
+    initAuth().then((unsubscribe) => {
+      if (active) cleanup = unsubscribe;
+      else unsubscribe?.();
+    });
+
+    return () => {
+      active = false;
+      cleanup?.();
+    };
   }, []);
 
   return <Router />;

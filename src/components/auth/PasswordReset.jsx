@@ -43,28 +43,9 @@ const PasswordReset = () => {
   const requestForm = useForm({ resolver: zodResolver(requestSchema) });
   const updateForm = useForm({ resolver: zodResolver(updateSchema) });
 
-  const ADMIN_EMAILS = import.meta.env.VITE_ADMIN_EMAILS?.split(',') ?? [];
-
-
   const onRequest = async ({ email }) => {
     setServerError('');
     const trimmed = email.trim().toLowerCase();
-
-    // Check if the email belongs to a known account before calling Supabase
-    const isAdmin = ADMIN_EMAILS.includes(trimmed);
-
-    if (!isAdmin) {
-      // Look up vendor_profiles by email
-      const { data } = await supabase
-        .from('vendor_profiles')
-        .select('vendor_id')
-        .eq('email', trimmed)
-        .maybeSingle();
-
-      if (!data) {
-        setServerError('');
-      }
-    }
 
     const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
       redirectTo: `${window.location.origin}/reset-password`,

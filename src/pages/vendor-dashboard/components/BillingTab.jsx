@@ -21,7 +21,6 @@ const BillingTab = () => {
   // get subscription expires at from authsotre
   const { user } = useAuthStore();
   const subscription = user?.subscription_expires_at;
-  ('subscription expires at is ', subscription);
 
 
 

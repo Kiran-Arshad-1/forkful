@@ -87,8 +87,6 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
             email: form.email.trim(),
             contact_phone: form.phone.trim(),
             is_listed: false,
-            //  calculate subscription_expires_at date based on current date + 2 months
-            subscription_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days from now
           })
           .select()
           .single();
@@ -110,13 +108,10 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
             data: {
               full_name: form.fullName.trim(),
               contact_phone: form.phone.trim(),
-              subscription_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
-
             },
           },
         });
         if (authError) {
-          ('Signup error:', authError);
           const msg = authError.message.toLowerCase();
           if (msg.includes('already registered') || msg.includes('already exists')) {
             setErrors({ email: 'An account with this email already exists. Please sign in.' });
@@ -127,7 +122,6 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
         }
 
         const userId = data?.user?.id;
-        ('Signup successful, user ID:', userId, 'and user is', data?.user);
         if (userId) {
           const { error: profileError } = await supabase
             .from('vendor_profiles')
@@ -137,7 +131,6 @@ const SignupForm = ({ onSuccess, googlePrefill }) => {
               email: form.email.trim(),
               contact_phone: form.phone.trim(),
               is_listed: false,
-              subscription_expires_at: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days from now
             }, { onConflict: 'vendor_id' });
 
           if (profileError) {

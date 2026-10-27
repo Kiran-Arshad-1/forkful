@@ -15,6 +15,7 @@ import InsightsTab from './components/InsightsTab';
 import ReviewsTab from './components/ReviewsTab';
 import SettingsTab from './components/SettingsTab';
 import { getBusinessStatus } from './utils/businessStatus';
+import { validateImageFile } from '../../lib/fileValidation';
 
 const GENDER_OPTIONS = [
   { value: 'female', label: 'Female' },
@@ -138,10 +139,22 @@ const VendorDashboard = () => {
   const handlePhotoSelect = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    try {
+      validateImageFile(file);
+    } catch (error) {
+      setEditError(error.message);
+      e.target.value = '';
+      return;
+    }
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
     setPhotoFile(file);
     setPhotoPreview(URL.createObjectURL(file));
     e.target.value = '';
   };
+
+  useEffect(() => () => {
+    if (photoPreview?.startsWith('blob:')) URL.revokeObjectURL(photoPreview);
+  }, [photoPreview]);
 
   const handleSaveProfile = async () => {
     if (!editName.trim() && !editContactNumber.trim() && !editAddress.trim() && !editGender && !photoFile) {

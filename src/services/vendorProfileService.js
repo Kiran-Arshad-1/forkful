@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { validateImageFile } from '../lib/fileValidation';
 
 const PROFILE_TABLE = 'vendor_profiles';
 const BUSINESS_TABLE = 'vendors_businesses';
@@ -28,7 +29,6 @@ export async function fetchVendorProfile(userId) {
 }
 
 export async function updateVendorProfile(userId, updates) {
-  ('Updating vendor profile for userId', userId, 'with updates:', updates);
   const { data, error } = await supabase
     .from(PROFILE_TABLE)
     .update({ ...updates, updated_at: new Date().toISOString() })
@@ -41,7 +41,6 @@ export async function updateVendorProfile(userId, updates) {
 }
 
 export async function insertVendorBusiness(ownerId, updates) {
-  ('Inserting business profile for ownerId', ownerId, 'with updates:', updates);
   const { data, error } = await supabase
     .from(BUSINESS_TABLE)
     .insert({ owner_id: ownerId, ...updates })
@@ -52,7 +51,6 @@ export async function insertVendorBusiness(ownerId, updates) {
     console.error('Error inserting business profile:', error);
     throw error;
   }
-  (data, '-------------------data')
   return data;
 }
 
@@ -176,7 +174,7 @@ export async function deleteMenuItem(itemId) {
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 export async function uploadBannerImage(vendorId, file) {
-  const ext = file.name.split('.').pop() ?? 'jpg';
+  const { extension: ext } = validateImageFile(file);
   const path = `${vendorId}/profile_photo.${ext}`;
 
   const { error } = await supabase.storage
@@ -202,7 +200,7 @@ export async function getProfilePhotoSignedUrl(path) {
 }
 
 export async function uploadMenuItemImage(menuItemId, file) {
-  const ext = file.name.split('.').pop() ?? 'jpg';
+  const { extension: ext } = validateImageFile(file);
   const path = `_menu/${menuItemId}/image.${ext}`;
 
   const { error } = await supabase.storage
@@ -216,7 +214,7 @@ export async function uploadMenuItemImage(menuItemId, file) {
 }
 
 export async function uploadMenuItemPhoto(file, vendorId) {
-  const ext = file.name.split('.').pop() || 'jpg';
+  const { extension: ext } = validateImageFile(file);
   const baseName = file.name.replace(/\.[^/.]+$/, '') || 'photo';
   const safeBase = baseName.replace(/[^a-zA-Z0-9._-]/g, '_');
   const path = `${vendorId}/menu_item_images/${Date.now()}-${safeBase}.${ext}`;
@@ -500,7 +498,8 @@ export async function fetchBusinessImagePathsByBusiness(businessId) {
 }
 
 export async function uploadBusinessPhoto(file, ownerId, caption, category = 'food') {
-  const path = buildBusinessPhotoPath(ownerId, file?.name, caption, category);
+  const { extension } = validateImageFile(file);
+  const path = buildBusinessPhotoPath(ownerId, `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`, caption, category);
 
   const { error: storageError } = await supabase.storage
     .from(BUSINESS_BUCKET)
@@ -511,9 +510,10 @@ export async function uploadBusinessPhoto(file, ownerId, caption, category = 'fo
 }
 
 export async function uploadBusinessPhotoForBusiness(file, businessId, ownerId, caption, category = 'food') {
+  const { extension } = validateImageFile(file);
   const validCategories = ['food', 'interior', 'staff', 'other'];
   const cat = validCategories.includes(category?.toLowerCase()) ? category.toLowerCase() : 'food';
-  const path = buildBusinessPhotoPath(ownerId, file?.name, caption, cat);
+  const path = buildBusinessPhotoPath(ownerId, `${file.name.replace(/\.[^/.]+$/, '')}.${extension}`, caption, cat);
 
   const { error: storageError } = await supabase.storage
     .from(BUSINESS_BUCKET)
@@ -563,7 +563,7 @@ export async function deleteBusinessPhotoForBusiness(businessId, ownerId, storag
 }
 
 export async function uploadGalleryPhoto(file, username, caption) {
-  const ext = file.name.split('.').pop() ?? 'jpg';
+  const { extension: ext } = validateImageFile(file);
   const path = `${username}/${Date.now()}.${ext}`;
 
   const { error: storageError } = await supabase.storage

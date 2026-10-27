@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import Icon from 'components/AppIcon';
+import { validateImageFile } from '../../../../lib/fileValidation';
 
 const CATEGORY_CHOICES = [
   {
@@ -50,9 +51,16 @@ const PhotoUploadModal = ({
 
   const handleFiles = (files) => {
     setValidationError('');
-    const imageFiles = Array.from(files).filter((f) => f.type.startsWith('image/'));
+    let imageFiles;
+    try {
+      imageFiles = Array.from(files).filter(Boolean);
+      imageFiles.forEach(validateImageFile);
+    } catch (error) {
+      setValidationError(error.message);
+      return;
+    }
     if (imageFiles.length === 0) {
-      setValidationError('Please select valid image files (JPG, PNG, WebP).');
+      setValidationError('Please select at least one image file.');
       return;
     }
 

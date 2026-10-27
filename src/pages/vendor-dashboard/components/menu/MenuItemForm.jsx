@@ -29,10 +29,8 @@ const MenuItemForm = ({
   if (!isOpen) return null;
 
   const handleFileChange = (e) => {
-    const files = Array.from(e.target.files).filter((f) => f.type.startsWith('image/'));
-    if (files.length > 0) {
-      onAddImages(files);
-    }
+    const files = Array.from(e.target.files || []);
+    if (files.length > 0) onAddImages(files);
     e.target.value = '';
   };
 

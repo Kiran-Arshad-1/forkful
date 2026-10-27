@@ -4,6 +4,7 @@ import useAuthStore from '../../../store/authStore';
 import useVendorProfileStore from '../../../store/vendorProfileStore';
 import { MenuSkeleton } from 'components/ui/Shimmer';
 import * as svc from '../../../services/vendorProfileService';
+import { validateImageFile } from '../../../lib/fileValidation';
 
 import MenuHeroHeader from './menu/MenuHeroHeader';
 import MenuHorizontalFilter from './menu/MenuHorizontalFilter';
@@ -260,6 +261,12 @@ const MenuTab = ({
   };
 
   const handleAddImages = (files) => {
+    try {
+      files.forEach(validateImageFile);
+    } catch (error) {
+      dispatch({ type: 'FORM_ERRORS', errors: { ...formErrors, images: error.message } });
+      return;
+    }
     const currentImages = formValues.images || [];
     if (currentImages.length + files.length > 3) {
       dispatch({
@@ -549,7 +556,7 @@ const MenuTab = ({
             type="button"
             onClick={() => {
               if (!items || items.length === 0) {
-                toast.error('Please add at least one menu item before proceeding.');
+                dispatch({ type: 'FORM_ERRORS', errors: { submit: 'Please add at least one menu item before proceeding.' } });
                 dispatch({ type: 'FORM_ADD' });
                 return;
               }

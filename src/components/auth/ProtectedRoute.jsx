@@ -18,8 +18,8 @@ const Spinner = () => (
  * allowedRoles  — ['vendor'] | ['admin'] — which roles may enter this route group
  * requireApproved — when true, vendor approval_status is checked and gates applied
  */
-const ProtectedRoute = ({ allowedRoles = [], requireApproved = false }) => {
-  const { isLoading, isAuthenticated, role, profile } = useAuthStore();
+const ProtectedRoute = ({ allowedRoles = [] }) => {
+  const { isLoading, isAuthenticated, role } = useAuthStore();
 
   if (isLoading) return <Spinner />;
 
@@ -29,7 +29,6 @@ const ProtectedRoute = ({ allowedRoles = [], requireApproved = false }) => {
 
   // No profile resolved (tables missing or user has no profile row) — back to login
   if (!role) {
-    ('found no role in auth store:', { role, profile });
     return <Navigate to="/vendor-login" replace />;
   }
 

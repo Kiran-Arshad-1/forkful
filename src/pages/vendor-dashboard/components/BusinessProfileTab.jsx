@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import Icon from 'components/AppIcon';
 import Input from 'components/ui/Input';
 import useAuthStore from '../../../store/authStore';
@@ -84,7 +86,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
   const mapRef = useRef(null);
   const leafletMapRef = useRef(null);
   const markerRef = useRef(null);
-  const leafletLoadedRef = useRef(false);
 
   // Fetch profile from Supabase via the store
   useEffect(() => {
@@ -113,8 +114,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
       setHasBusiness(false);
     }
   }, [vendor_business]);
-
-  ('got all business from auth ', vendor_business);
 
   // Hydrate local form state when the store profile loads or when editing an existing business
   useEffect(() => {
@@ -181,34 +180,13 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
     setDataLoading(false);
   }, [profile?.vendor_id, draftBusinessProfile, isOnboarding, isEditingBusiness, selectedBusinessId, vendor_business, savedHours]);
 
-  // Load Leaflet CSS + JS dynamically
   useEffect(() => {
-    if (leafletLoadedRef?.current) return;
-
-    const cssLink = document.createElement('link');
-    cssLink.rel = 'stylesheet';
-    cssLink.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-    document.head?.appendChild(cssLink);
-
-    const script = document.createElement('script');
-    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-    script.async = true;
-    script.onload = () => {
-      leafletLoadedRef.current = true;
-
-    };
-    document.head?.appendChild(script);
-
-    return () => { };
-  }, []);
-
-  useEffect(() => {
-    if (!leafletLoadedRef.current) return;
     if (!mapRef.current) return;
     if (leafletMapRef.current) return;
+    if (!isCreatingBusiness && !isEditingBusiness) return;
 
     initMap();
-  }, [mapRef.current, isCreatingBusiness, isEditingBusiness]);
+  }, [isCreatingBusiness, isEditingBusiness]);
 
   useEffect(() => {
     if (!isCreatingBusiness && !isEditingBusiness && leafletMapRef.current) {
@@ -220,8 +198,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
 
   const initMap = useCallback(() => {
     if (!mapRef?.current || leafletMapRef?.current) return;
-    const L = window.L;
-    if (!L) return;
 
     const initialLat = parseFloat(form?.lat) || BARBADOS_CENTER?.lat;
     const initialLng = parseFloat(form?.lng) || BARBADOS_CENTER?.lng;
@@ -271,16 +247,15 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
 
   // Re-init map after data loads
   useEffect(() => {
-    if (!dataLoading && leafletLoadedRef?.current && !leafletMapRef?.current) {
+    if (!dataLoading && !leafletMapRef?.current && (isCreatingBusiness || isEditingBusiness)) {
       initMap();
     }
-    if (!dataLoading && leafletLoadedRef?.current && leafletMapRef?.current) {
+    if (!dataLoading && leafletMapRef?.current) {
       // Update marker if coords loaded
       const lat = parseFloat(form?.lat);
       const lng = parseFloat(form?.lng);
       if (!isNaN(lat) && !isNaN(lng)) {
-        const L = window.L;
-        if (L && leafletMapRef?.current) {
+        if (leafletMapRef?.current) {
           const pinIcon = L?.divIcon({
             html: `<div style="width:28px;height:36px;position:relative;">
               <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
@@ -297,11 +272,9 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
         }
       }
     }
-  }, [dataLoading]);
+  }, [dataLoading, form?.lat, form?.lng, initMap, isCreatingBusiness, isEditingBusiness]);
 
   const placeOrMoveMarker = (lat, lng, map, icon) => {
-    const L = window.L;
-    if (!L) return;
     if (markerRef?.current) {
       markerRef?.current?.setLatLng([lat, lng]);
     } else {
@@ -336,7 +309,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
         setGeoLoading(false);
         updateCoords(latitude, longitude);
         if (leafletMapRef?.current) {
-          const L = window.L;
           const pinIcon = L?.divIcon({
             html: `<div style="width:28px;height:36px;position:relative;">
               <svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))">
@@ -641,7 +613,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
                     const lat = parseFloat(e?.target?.value);
                     const lng = parseFloat(form?.lng);
                     if (!isNaN(lat) && !isNaN(lng) && leafletMapRef?.current) {
-                      const L = window.L;
                       const pinIcon = L?.divIcon({
                         html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/><circle cx="14" cy="14" r="6" fill="#061538"/></svg></div>`,
                         className: '', iconSize: [28, 36], iconAnchor: [14, 36],
@@ -665,7 +636,6 @@ const BusinessProfileTab = ({ isOnboarding, onNext }) => {
                     const lat = parseFloat(form?.lat);
                     const lng = parseFloat(e?.target?.value);
                     if (!isNaN(lat) && !isNaN(lng) && leafletMapRef?.current) {
-                      const L = window.L;
                       const pinIcon = L?.divIcon({
                         html: `<div style="width:28px;height:36px;"><svg viewBox="0 0 28 36" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5))"><path d="M14 0C6.268 0 0 6.268 0 14c0 9.333 14 22 14 22S28 23.333 28 14C28 6.268 21.732 0 14 0z" fill="#FBC33B"/><circle cx="14" cy="14" r="6" fill="#061538"/></svg></div>`,
                         className: '', iconSize: [28, 36], iconAnchor: [14, 36],

@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { validateImageFile } from '../lib/fileValidation';
 
 const TRAILS_TABLE = 'trails';
 const TRAIL_STOPS_TABLE = 'trail_stops';
@@ -33,8 +34,6 @@ const TRAILS_SELECT = `
 
 const TRAIL_DETAILS_SELECT = TRAILS_SELECT;
 
-const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_IMAGE_SIZE = 8 * 1024 * 1024;
 const TRAIL_IMAGE_PUBLIC_MARKER = `/storage/v1/object/public/${TRAIL_IMAGES_BUCKET}/`;
 
 export async function fetchTrails() {
@@ -111,18 +110,12 @@ async function assertActiveStops(stops) {
 
 export async function uploadTrailBanner(file) {
   if (!file) return null;
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-    throw new Error('Cover image must be a JPG, PNG, or WebP file.');
-  }
-  if (file.size > MAX_IMAGE_SIZE) {
-    throw new Error('Cover image must be smaller than 8 MB.');
-  }
+  const { extension } = validateImageFile(file);
 
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;
   if (!authData.user) throw new Error('You must be signed in to upload a trail image.');
 
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
   const storagePath = `${authData.user.id}/${crypto.randomUUID()}.${extension}`;
   const { error: uploadError } = await supabase.storage
     .from(TRAIL_IMAGES_BUCKET)
